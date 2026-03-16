@@ -5,10 +5,10 @@
 <style>
 body{margin:0;font-family:sans-serif;background:#eee;overflow:hidden;}
 #panel{
-  position:absolute; background:#f5f5f5; padding:10px; box-sizing:border-box; overflow:auto;
-  transition:all 0.2s;
+  position:absolute; left:0; top:0; width:220px; height:100%; background:#f5f5f5;
+  padding:10px; box-sizing:border-box; overflow:hidden;
 }
-#canvas{position:absolute; background:#eee;}
+#canvas{position:absolute; left:220px; top:0; background:#eee;}
 button{margin-top:5px;}
 input{width:60px;margin:3px 0;}
 label{font-size:13px;}
@@ -56,36 +56,19 @@ const canvas=document.getElementById("canvas");
 const ctx=canvas.getContext("2d");
 const panel=document.getElementById("panel");
 
-// レスポンシブ配置
+let items=[];
+let dragItem=null, offsetX=0, offsetY=0;
+
+// レスポンシブ
 function resizeCanvas(){
-  if(window.innerWidth < window.innerHeight){
-    // 縦画面：パネル上部
-    panel.style.width="100%";
-    panel.style.height="220px";
-    panel.style.left="0px";
-    panel.style.top="0px";
-    canvas.style.left="0px";
-    canvas.style.top="220px";
-    canvas.width=window.innerWidth;
-    canvas.height=window.innerHeight-220;
-  } else {
-    // 横画面：パネル左
-    panel.style.width="220px";
-    panel.style.height="100%";
-    panel.style.left="0px";
-    panel.style.top="0px";
-    canvas.style.left="220px";
-    canvas.style.top="0px";
-    canvas.width=window.innerWidth-220;
-    canvas.height=window.innerHeight;
-  }
+  canvas.width=window.innerWidth-220;
+  canvas.height=window.innerHeight;
+  canvas.style.left="220px";
+  canvas.style.top="0px";
   draw();
 }
 window.addEventListener("resize",resizeCanvas);
 resizeCanvas();
-
-let items=[];
-let dragItem=null, offsetX=0, offsetY=0;
 
 // グリッド
 function drawGrid(){
@@ -147,7 +130,9 @@ document.getElementById("addBtn").addEventListener("click",()=>{
   const color=["Crash","Ride","HiHat","Splash","China"].includes(type)?"#FFD700":"#fff";
   if(!size || (type==="Kick" && !depth)) return alert("サイズを正しく入力してください");
 
-  const x=canvas.width/2, y=canvas.height/2;
+  // 画面内中央に出現
+  const x=Math.max(30, Math.min(canvas.width-30, canvas.width/2));
+  const y=Math.max(30, Math.min(canvas.height-30, canvas.height/2));
   items.push({x,y,type,size,depth,color});
   draw();
 });
@@ -160,7 +145,7 @@ canvas.addEventListener("mousedown",e=>{
     const d=items[i], hit = (d.type=="Kick") ?
       (mx>d.x-d.size*1.5 && mx<d.x+d.size*1.5 && my>d.y-d.depth && my<d.y+d.depth) :
       (Math.hypot(mx-d.x,my-d.y)<d.size*2);
-    if(hit){ dragItem=d; offsetX=mx-d.x; offsetY= my-d.y; break;}
+    if(hit){ dragItem=d; offsetX=mx-d.x; offsetY=my-d.y; break;}
   }
 });
 canvas.addEventListener("mousemove", e=>{
