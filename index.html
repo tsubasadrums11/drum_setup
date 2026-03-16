@@ -9,6 +9,24 @@ body{margin:0;font-family:sans-serif;background:#eee;overflow:hidden;}
 button{margin-top:5px;}
 input{width:60px;margin:3px 0;}
 label{font-size:13px;}
+
+/* ADDボタンを目立たせる */
+#addBtn{
+  position:absolute;
+  right:20px;
+  bottom:20px;
+  width:70px;
+  height:70px;
+  border-radius:50%;
+  background:#ffd400;
+  border:none;
+  font-size:24px;
+  font-weight:bold;
+  cursor:pointer;
+  box-shadow:0 4px 6px rgba(0,0,0,0.3);
+  transition:0.2s;
+}
+#addBtn:hover{transform:scale(1.1);}
 </style>
 </head>
 <body>
@@ -28,15 +46,18 @@ label{font-size:13px;}
   <option>Floor Tom</option>
   <option>Crash</option>
   <option>Ride</option>
+  <option>HiHat</option>
+  <option>Splash</option>
+  <option>China</option>
 </select><br>
 <label>Size (inch):</label><br>
 <input id="sizeInput" type="number"><br>
 <label id="depthLabel">Depth (inch, Kick only):</label><br>
 <input id="depthInput" type="number"><br>
-<button id="addBtn">Add</button>
 </div>
 
 <canvas id="canvas"></canvas>
+<button id="addBtn">＋ Add</button>
 
 <script>
 const canvas=document.getElementById("canvas");
@@ -47,7 +68,7 @@ canvas.height=window.innerHeight;
 let items=[];
 let dragItem=null, offsetX=0, offsetY=0;
 
-// 描画グリッド
+// グリッド描画
 function drawGrid(){
   let size=50; ctx.strokeStyle="#ccc";
   for(let x=0;x<canvas.width;x+=size){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,canvas.height); ctx.stroke();}
@@ -68,7 +89,6 @@ function draw(){
     ctx.lineWidth=3; ctx.strokeStyle="black"; ctx.fillStyle=d.color; ctx.textAlign="center";
 
     if(d.type=="Kick"){
-      // 奥行き感を調整
       let rectWidth=d.size*3, rectHeight=d.depth*2;
       ctx.beginPath(); ctx.rect(d.x-rectWidth/2,d.y-rectHeight/2,rectWidth,rectHeight); ctx.fill(); ctx.stroke();
       ctx.fillStyle="black"; ctx.font="bold 16px sans-serif"; ctx.fillText(d.size+'"×'+d.depth+'"',d.x,d.y-5);
@@ -93,7 +113,7 @@ function updateList(){
     if(d.type=="Tom") label="TT";
     if(d.type=="Floor Tom") label="FT";
     let text=d.size+'" '+label;
-    if(d.type=="Crash"||d.type=="Ride") cymHTML+=text+"<br>";
+    if(d.type=="Crash"||d.type=="Ride"||d.type=="HiHat"||d.type=="Splash"||d.type=="China") cymHTML+=text+"<br>";
     else drumHTML+=text+"<br>";
   });
   document.getElementById("list").innerHTML=drumHTML;
@@ -102,12 +122,13 @@ function updateList(){
 
 draw();
 
-// ドラム追加ボタン
+// ADDボタン処理
 document.getElementById("addBtn").addEventListener("click",()=>{
   const type=document.getElementById("typeSelect").value;
   const size=parseInt(document.getElementById("sizeInput").value);
   const depth=type==="Kick"?parseInt(document.getElementById("depthInput").value):0;
-  const color=(type==="Crash"||type==="Ride")?"#FFD700":"#fff";
+  const cymbals=["Crash","Ride","HiHat","Splash","China"];
+  const color=cymbals.includes(type)?"#FFD700":"#fff";
   if(!size || (type==="Kick" && !depth)) return alert("サイズを正しく入力してください");
 
   const x=canvas.width/2, y=canvas.height/2;
@@ -121,8 +142,13 @@ canvas.addEventListener("mousedown",e=>{
   const mx=e.clientX-rect.left,my=e.clientY-rect.top;
   for(let i=items.length-1;i>=0;i--){
     const d=items[i]; let hit=false;
-    if(d.type=="Kick") hit=(mx>d.x-d.size*1.5 && mx<d.x+d.size*1.5 && my>d.y-d.depth && my<d.y+d.depth);
-    else hit=Math.hypot(mx-d.x,my-d.y)<d.size*2;
+    if(d.type=="Kick"){
+      const w=d.size*3, h=d.depth*2;
+      hit=(mx>d.x-w/2 && mx<d.x+w/2 && my>d.y-h/2 && my<d.y+h/2);
+    } else {
+      const r=d.size*2;
+      hit=Math.hypot(mx-d.x,my-d.y)<r;
+    }
     if(hit){ dragItem=d; offsetX=mx-d.x; offsetY=my-d.y; break; }
   }
 });
