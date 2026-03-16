@@ -3,48 +3,37 @@
 <head>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
-body{
-  margin:0;
-  font-family:sans-serif;
-  background:#eee;
-  overflow:hidden;
-}
-#panel{
-  position:absolute;
-  left:0;
-  top:0;
-  width:220px;
-  height:100%;
-  background:#f5f5f5;
-  padding:15px;
-  box-sizing:border-box;
-  overflow:auto;
-}
-#canvas{
-  position:absolute;
-  left:220px;
-  top:0;
-}
-#addBtn{
-  position:absolute;
-  right:20px;
-  bottom:20px;
-  width:60px;
-  height:60px;
-  border-radius:50%;
-  background:#ffd400;
-  border:none;
-  font-size:32px;
-}
+body{margin:0;font-family:sans-serif;background:#eee;overflow:hidden;}
+#panel{position:absolute;left:0;top:0;width:220px;height:100%;background:#f5f5f5;padding:15px;box-sizing:border-box;overflow:auto;}
+#canvas{position:absolute;left:220px;top:0;}
+#addBtn{position:absolute;right:20px;bottom:20px;width:60px;height:60px;border-radius:50%;background:#ffd400;border:none;font-size:32px;}
+input{width:60px;margin:3px 0;}
+label{font-size:13px;}
 </style>
 </head>
 <body>
 
 <div id="panel">
-  <h3>Drums Kit</h3>
-  <div id="list"></div>
-  <h3>Cymbals</h3>
-  <div id="cymbalList"></div>
+<h3>Drums Kit</h3>
+<div id="list"></div>
+<h3>Cymbals</h3>
+<div id="cymbalList"></div>
+<hr>
+<h3>Edit Selected</h3>
+<label>Type:</label>
+<select id="typeSelect">
+  <option>Kick</option>
+  <option>Snare</option>
+  <option>Tom</option>
+  <option>Floor Tom</option>
+  <option>Crash</option>
+  <option>Ride</option>
+</select><br>
+<label>Size (inch):</label><br>
+<input id="sizeInput" type="number"><br>
+<label id="depthLabel">Depth (inch):</label><br>
+<input id="depthInput" type="number"><br>
+<button id="applyBtn">Apply</button>
 </div>
 
 <canvas id="canvas"></canvas>
@@ -66,25 +55,18 @@ let items=[
   {x:500,y:70,type:"Ride",size:20,color:"#FFD700"}
 ];
 
-let dragItem=null;
-let offsetX=0;
-let offsetY=0;
+let dragItem=null, offsetX=0, offsetY=0;
+let selectedItem=null;
 
 function drawGrid(){
-  let size=50;
-  ctx.strokeStyle="#ccc";
-  for(let x=0;x<canvas.width;x+=size){
-    ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,canvas.height); ctx.stroke();
-  }
-  for(let y=0;y<canvas.height;y+=size){
-    ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(canvas.width,y); ctx.stroke();
-  }
+  let size=50; ctx.strokeStyle="#ccc";
+  for(let x=0;x<canvas.width;x+=size){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,canvas.height); ctx.stroke();}
+  for(let y=0;y<canvas.height;y+=size){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(canvas.width,y); ctx.stroke();}
 }
 
 function draw(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
   drawGrid();
-
   items.forEach(d=>{
     let label=d.type;
     if(d.type=="Kick") label="BD";
@@ -92,31 +74,29 @@ function draw(){
     if(d.type=="Tom") label="TT";
     if(d.type=="Floor Tom") label="FT";
 
+    ctx.lineWidth=3;
+    ctx.strokeStyle="black";
+    ctx.fillStyle=d.color;
+    ctx.textAlign="center";
+
     if(d.type=="Kick"){
       let w=d.size*4, h=d.depth*3;
-      ctx.beginPath();
-      ctx.rect(d.x-w/2,d.y-h/2,w,h);
-      ctx.fillStyle=d.color; ctx.fill();
-      ctx.lineWidth=3; ctx.strokeStyle="black"; ctx.stroke();
-      ctx.fillStyle="black"; ctx.textAlign="center";
-      ctx.font="bold 16px sans-serif";
-      ctx.fillText(d.size+'"×'+d.depth+'"',d.x,d.y-5);
-      ctx.font="13px sans-serif";
-      ctx.fillText(label,d.x,d.y+15);
+      ctx.beginPath(); ctx.rect(d.x-w/2,d.y-h/2,w,h); ctx.fill(); ctx.stroke();
+      ctx.fillStyle="black"; ctx.font="bold 16px sans-serif"; ctx.fillText(d.size+'"×'+d.depth+'"',d.x,d.y-5);
+      ctx.font="13px sans-serif"; ctx.fillText(label,d.x,d.y+15);
     } else {
       let r=d.size*2;
-      ctx.beginPath();
-      ctx.arc(d.x,d.y,r,0,Math.PI*2);
-      ctx.fillStyle=d.color; ctx.fill();
-      ctx.lineWidth=3; ctx.strokeStyle="black"; ctx.stroke();
-      ctx.fillStyle="black"; ctx.textAlign="center";
-      ctx.font="bold 14px sans-serif";
-      ctx.fillText(d.size+'"',d.x,d.y-5);
-      ctx.font="12px sans-serif";
-      ctx.fillText(label,d.x,d.y+12);
+      ctx.beginPath(); ctx.arc(d.x,d.y,r,0,Math.PI*2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle="black"; ctx.font="bold 14px sans-serif"; ctx.fillText(d.size+'"',d.x,d.y-5);
+      ctx.font="12px sans-serif"; ctx.fillText(label,d.x,d.y+12);
+    }
+    // 選択中を強調
+    if(d===selectedItem){
+      ctx.strokeStyle="red";
+      if(d.type=="Kick") ctx.strokeRect(d.x-d.size*2,d.y-d.depth*1.5,d.size*4,d.depth*3);
+      else ctx.beginPath(), ctx.arc(d.x,d.y,d.size*2,0,Math.PI*2), ctx.stroke();
     }
   });
-
   updateList();
 }
 
@@ -129,10 +109,8 @@ function updateList(){
     if(d.type=="Tom") label="TT";
     if(d.type=="Floor Tom") label="FT";
     let text=d.size+'" '+label;
-    if(d.type=="Crash"||d.type=="Ride"||d.type=="Splash"||d.type=="China"||d.type=="HiHat")
-      cymHTML+=text+"<br>";
-    else
-      drumHTML+=text+"<br>";
+    if(d.type=="Crash"||d.type=="Ride"||d.type=="Splash"||d.type=="China"||d.type=="HiHat") cymHTML+=text+"<br>";
+    else drumHTML+=text+"<br>";
   });
   document.getElementById("list").innerHTML=drumHTML;
   document.getElementById("cymbalList").innerHTML=cymHTML;
@@ -149,7 +127,10 @@ document.getElementById("addBtn").addEventListener("click",()=>{
   const color=(type=="Crash"||type=="Ride")?"#FFD700":"#fff";
   const x=Math.random()*(canvas.width-100)+50;
   const y=Math.random()*(canvas.height-100)+50;
-  items.push({x,y,type,size,depth,color});
+  const newItem={x,y,type,size,depth,color};
+  items.push(newItem);
+  selectedItem=newItem;
+  updateInputs();
   draw();
 });
 
@@ -162,7 +143,14 @@ canvas.addEventListener("mousedown",e=>{
     let hit=false;
     if(d.type=="Kick") hit=(mx>d.x-d.size*2 && mx<d.x+d.size*2 && my>d.y-d.depth*1.5 && my<d.y+d.depth*1.5);
     else hit=Math.hypot(mx-d.x,my-d.y)<d.size*2;
-    if(hit){ dragItem=d; offsetX=mx-d.x; offsetY=my-d.y; break; }
+    if(hit){
+      dragItem=d;
+      selectedItem=d;
+      offsetX=mx-d.x; offsetY=my-d.y;
+      updateInputs();
+      draw();
+      break;
+    }
   }
 });
 
@@ -174,10 +162,44 @@ canvas.addEventListener("mousemove",e=>{
     draw();
   }
 });
-
 canvas.addEventListener("mouseup",()=>{ dragItem=null; });
 canvas.addEventListener("mouseleave",()=>{ dragItem=null; });
 
+// 入力欄
+const typeSelect=document.getElementById("typeSelect");
+const sizeInput=document.getElementById("sizeInput");
+const depthInput=document.getElementById("depthInput");
+const depthLabel=document.getElementById("depthLabel");
+const applyBtn=document.getElementById("applyBtn");
+
+function updateInputs(){
+  if(!selectedItem) return;
+  typeSelect.value=selectedItem.type;
+  sizeInput.value=selectedItem.size;
+  if(selectedItem.type=="Kick"){
+    depthLabel.style.display="block";
+    depthInput.style.display="block";
+    depthInput.value=selectedItem.depth;
+  } else {
+    depthLabel.style.display="none";
+    depthInput.style.display="none";
+  }
+}
+
+typeSelect.addEventListener("change",()=>{
+  if(!selectedItem) return;
+  selectedItem.type=typeSelect.value;
+  if(selectedItem.type=="Kick"){ depthLabel.style.display="block"; depthInput.style.display="block"; }
+  else { depthLabel.style.display="none"; depthInput.style.display="none"; selectedItem.depth=0; }
+  draw();
+});
+
+applyBtn.addEventListener("click",()=>{
+  if(!selectedItem) return;
+  selectedItem.size=parseInt(sizeInput.value)||selectedItem.size;
+  if(selectedItem.type=="Kick") selectedItem.depth=parseInt(depthInput.value)||selectedItem.depth;
+  draw();
+});
 </script>
 </body>
 </html>
