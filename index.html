@@ -24,10 +24,6 @@ box-sizing:border-box;
 overflow:auto;
 }
 
-#panel h2{
-margin:0 0 10px 0;
-}
-
 #canvas{
 position:absolute;
 left:220px;
@@ -44,20 +40,6 @@ border-radius:50%;
 background:#ffd400;
 border:none;
 font-size:32px;
-box-shadow:0 4px 10px rgba(0,0,0,0.3);
-}
-
-#menuBtn{
-position:absolute;
-right:20px;
-top:20px;
-width:50px;
-height:50px;
-border-radius:50%;
-background:#aaa;
-border:none;
-font-size:24px;
-color:white;
 }
 
 </style>
@@ -67,19 +49,16 @@ color:white;
 
 <div id="panel">
 
-<h2>Drums Kit</h2>
-
+<h3>Drums Kit</h3>
 <div id="list"></div>
 
-<h2>Cymbals</h2>
-
+<h3>Cymbals</h3>
 <div id="cymbalList"></div>
 
 </div>
 
 <canvas id="canvas"></canvas>
 
-<button id="menuBtn">⋯</button>
 <button id="addBtn">＋</button>
 
 <script>
@@ -90,12 +69,21 @@ const ctx=canvas.getContext("2d")
 canvas.width=window.innerWidth-220
 canvas.height=window.innerHeight
 
-let items=[]
+let items=[
+
+{x:400,y:300,type:"Kick",size:22,depth:18,color:"#ddd"},
+{x:400,y:200,type:"Snare",size:14,color:"#fff"},
+{x:300,y:150,type:"Tom",size:10,color:"#fff"},
+{x:450,y:150,type:"Tom",size:12,color:"#fff"},
+{x:550,y:300,type:"Floor Tom",size:16,color:"#fff"},
+{x:250,y:80,type:"Crash",size:18,color:"#FFD700"},
+{x:500,y:70,type:"Ride",size:20,color:"#FFD700"}
+
+]
 
 function drawGrid(){
 
 let size=50
-
 ctx.strokeStyle="#ccc"
 
 for(let x=0;x<canvas.width;x+=size){
@@ -122,36 +110,69 @@ drawGrid()
 
 items.forEach(d=>{
 
+let label=d.type
+
+if(d.type=="Kick") label="BD"
+if(d.type=="Snare") label="SD"
+if(d.type=="Tom") label="TT"
+if(d.type=="Floor Tom") label="FT"
+
+if(d.type=="Kick"){
+
+let w=d.size*4
+let h=d.depth*3
+
 ctx.beginPath()
-ctx.arc(d.x,d.y,d.size*2,0,Math.PI*2)
+ctx.rect(d.x-w/2,d.y-h/2,w,h)
+
 ctx.fillStyle=d.color
 ctx.fill()
 
+ctx.lineWidth=3
 ctx.strokeStyle="black"
-ctx.lineWidth=2
 ctx.stroke()
+
+ctx.fillStyle="black"
+ctx.textAlign="center"
+
+ctx.font="bold 16px sans-serif"
+ctx.fillText(d.size+'"×'+d.depth+'"',d.x,d.y-5)
+
+ctx.font="13px sans-serif"
+ctx.fillText(label,d.x,d.y+15)
+
+}
+
+else{
+
+let r=d.size*2
+
+ctx.beginPath()
+ctx.arc(d.x,d.y,r,0,Math.PI*2)
+
+ctx.fillStyle=d.color
+ctx.fill()
+
+ctx.lineWidth=3
+ctx.strokeStyle="black"
+ctx.stroke()
+
+ctx.fillStyle="black"
+ctx.textAlign="center"
+
+ctx.font="bold 14px sans-serif"
+ctx.fillText(d.size+'"',d.x,d.y-5)
+
+ctx.font="12px sans-serif"
+ctx.fillText(label,d.x,d.y+12)
+
+}
 
 })
 
 updateList()
 
 }
-
-function addDrum(){
-
-items.push({
-x:300,
-y:200,
-size:10,
-color:"#fff",
-type:"Tom"
-})
-
-draw()
-
-}
-
-document.getElementById("addBtn").onclick=addDrum
 
 function updateList(){
 
@@ -160,9 +181,16 @@ let cymHTML=""
 
 items.forEach(d=>{
 
-let text=d.size+"\" "+d.type
+let label=d.type
 
-if(d.type=="Crash"||d.type=="Ride"||d.type=="Splash"||d.type=="China")
+if(d.type=="Kick") label="BD"
+if(d.type=="Snare") label="SD"
+if(d.type=="Tom") label="TT"
+if(d.type=="Floor Tom") label="FT"
+
+let text=d.size+'" '+label
+
+if(d.type=="Crash"||d.type=="Ride"||d.type=="Splash"||d.type=="China"||d.type=="HiHat")
 cymHTML+=text+"<br>"
 else
 drumHTML+=text+"<br>"
