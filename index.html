@@ -20,6 +20,8 @@ padding:10px;
 display:flex;
 flex-wrap:wrap;
 gap:6px;
+position:relative;
+z-index:2;
 }
 
 button,select,input{
@@ -35,18 +37,19 @@ color:white;
 
 canvas{
 display:block;
-background:#1a1a1a;
 touch-action:none;
 }
 
 #legend{
-position:absolute;
+position:fixed;
 left:10px;
 top:80px;
-background:rgba(0,0,0,0.6);
+background:rgba(0,0,0,0.7);
 padding:10px;
 border-radius:6px;
 font-size:14px;
+z-index:10;
+min-width:120px;
 }
 
 </style>
@@ -70,13 +73,16 @@ font-size:14px;
 </select>
 
 <input id="size" type="number" value="10"> inch
-
 <input id="color" type="color" value="#ffffff">
 
 <button onclick="addItem()">追加</button>
 <button onclick="deleteItem()">削除</button>
 <button onclick="resetItems()">全消去</button>
 <button onclick="toggleGrid()">グリッド</button>
+
+背景
+<input id="bgcolor" type="color" value="#1a1a1a" onchange="changeBackground()">
+
 <button onclick="savePNG()">PNG保存</button>
 
 </div>
@@ -95,6 +101,7 @@ let items=[]
 let selected=null
 let dragging=false
 let grid=true
+let bgColor="#1a1a1a"
 
 function resizeCanvas(){
 canvas.width=window.innerWidth
@@ -105,6 +112,14 @@ draw()
 window.addEventListener("resize",resizeCanvas)
 
 resizeCanvas()
+
+function changeBackground(){
+
+bgColor=document.getElementById("bgcolor").value
+localStorage.setItem("drumBg",bgColor)
+draw()
+
+}
 
 function addItem(){
 
@@ -162,7 +177,7 @@ function drawGrid(){
 
 let size=40
 
-ctx.strokeStyle="#222"
+ctx.strokeStyle="#333"
 
 for(let x=0;x<canvas.width;x+=size){
 
@@ -188,9 +203,9 @@ function updateLegend(){
 
 let text=""
 
-items.forEach(d=>{
+items.forEach((d,i)=>{
 
-text+=d.type+" "+d.size+"\"<br>"
+text+= (i+1)+". "+d.type+" "+d.size+"\"<br>"
 
 })
 
@@ -200,7 +215,8 @@ legend.innerHTML=text
 
 function draw(){
 
-ctx.clearRect(0,0,canvas.width,canvas.height)
+ctx.fillStyle=bgColor
+ctx.fillRect(0,0,canvas.width,canvas.height)
 
 if(grid) drawGrid()
 
@@ -244,7 +260,6 @@ selected=null
 items.forEach((d,i)=>{
 
 let r=d.size*3
-
 let dist=Math.hypot(pos.x-d.x,pos.y-d.y)
 
 if(dist<r){
@@ -289,7 +304,6 @@ selected=null
 items.forEach((d,i)=>{
 
 let r=d.size*3
-
 let dist=Math.hypot(x-d.x,y-d.y)
 
 if(dist<r){
@@ -321,6 +335,13 @@ canvas.addEventListener("touchend",()=>{
 dragging=false
 
 })
+
+let savedBg=localStorage.getItem("drumBg")
+
+if(savedBg){
+bgColor=savedBg
+document.getElementById("bgcolor").value=savedBg
+}
 
 draw()
 
