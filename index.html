@@ -4,21 +4,32 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
 body{margin:0;font-family:sans-serif;background:#eee;overflow:hidden;}
-#panel{position:absolute; left:0; top:0; width:220px; height:100%; background:#f5f5f5; padding:10px; box-sizing:border-box;}
+#panel{
+  position:absolute; left:0; top:0; width:220px; height:100%;
+  background:#f5f5f5; padding:10px; box-sizing:border-box;
+  overflow:auto; transition:0.3s;
+}
+#panel.folded{width:40px; padding:5px;}
 #canvas{position:absolute; top:0; background:#eee;}
+button{margin-top:5px;}
+input{width:60px;margin:3px 0;}
+label{font-size:13px;}
 #addBtn{
   position:absolute; right:20px; bottom:20px; width:70px; height:70px;
   border-radius:50%; background:#ffd400; border:none; font-size:24px; font-weight:bold;
   cursor:pointer; box-shadow:0 4px 6px rgba(0,0,0,0.3); transition:0.2s;
 }
 #addBtn:hover{transform:scale(1.1);}
-input{width:60px;margin:3px 0;}
-label{font-size:13px;}
+#foldBtn{
+  position:absolute; top:10px; right:10px; width:25px; height:25px;
+  cursor:pointer; background:#ccc; border:none; font-weight:bold;
+}
 </style>
 </head>
 <body>
 
 <div id="panel">
+<button id="foldBtn">≡</button>
 <h3>Drums Kit</h3>
 <div id="list"></div>
 <h3>Cymbals</h3>
@@ -41,6 +52,8 @@ label{font-size:13px;}
 <input id="sizeInput" type="number"><br>
 <label id="depthLabel">Depth (inch, Kick only):</label><br>
 <input id="depthInput" type="number"><br>
+<hr>
+<button id="resetBtn">Reset All</button>
 </div>
 
 <canvas id="canvas"></canvas>
@@ -50,12 +63,11 @@ label{font-size:13px;}
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 const panel = document.getElementById("panel");
-
 let items = [];
 let dragItem = null;
 let offsetX = 0, offsetY = 0;
 
-// Canvas サイズ調整（パネル幅を反映）
+// Canvasサイズ調整
 function resizeCanvas(){
   const panelWidth = panel.offsetWidth;
   canvas.width = window.innerWidth - panelWidth;
@@ -69,45 +81,34 @@ resizeCanvas();
 
 // グリッド描画
 function drawGrid(){
-  let size = 50;
-  ctx.strokeStyle = "#ccc";
-  for(let x=0; x<canvas.width; x+=size){
-    ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,canvas.height); ctx.stroke();
-  }
-  for(let y=0; y<canvas.height; y+=size){
-    ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(canvas.width,y); ctx.stroke();
-  }
+  let size = 50; ctx.strokeStyle="#ccc";
+  for(let x=0;x<canvas.width;x+=size){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,canvas.height); ctx.stroke();}
+  for(let y=0;y<canvas.height;y+=size){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(canvas.width,y); ctx.stroke();}
 }
 
-// 再描画
+// 描画（＋2インチ表示）
 function draw(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
   drawGrid();
-  items.forEach(d => {
+  items.forEach(d=>{
+    let displaySize = d.size + 2; // +2インチ表示
     let label = d.type;
     if(d.type=="Kick") label = "BD";
     if(d.type=="Snare") label = "SD";
     if(d.type=="Tom") label = "TT";
     if(d.type=="Floor Tom") label = "FT";
-    ctx.lineWidth = 3;
-    ctx.strokeStyle = "black";
-    ctx.fillStyle = d.color;
-    ctx.textAlign = "center";
+    ctx.lineWidth = 3; ctx.strokeStyle = "black"; ctx.fillStyle = d.color; ctx.textAlign="center";
 
     if(d.type=="Kick"){
-      let w = d.size*3, h = d.depth*2;
-      ctx.beginPath(); ctx.rect(d.x-w/2, d.y-h/2, w, h);
-      ctx.fill(); ctx.stroke();
-      ctx.fillStyle="black"; ctx.font="bold 16px sans-serif";
-      ctx.fillText(d.size+'"×'+d.depth+'"', d.x, d.y-5);
-      ctx.font="13px sans-serif"; ctx.fillText(label, d.x, d.y+15);
+      let w = displaySize*3, h = d.depth*2;
+      ctx.beginPath(); ctx.rect(d.x-w/2,d.y-h/2,w,h); ctx.fill(); ctx.stroke();
+      ctx.fillStyle="black"; ctx.font="bold 16px sans-serif"; ctx.fillText(d.size+'"×'+d.depth+'"',d.x,d.y-5);
+      ctx.font="13px sans-serif"; ctx.fillText(label,d.x,d.y+15);
     } else {
-      let r = d.size*2;
-      ctx.beginPath(); ctx.arc(d.x, d.y, r, 0, Math.PI*2);
-      ctx.fill(); ctx.stroke();
-      ctx.fillStyle="black"; ctx.font="bold 14px sans-serif";
-      ctx.fillText(d.size+'"', d.x, d.y-5);
-      ctx.font="12px sans-serif"; ctx.fillText(label, d.x, d.y+12);
+      let r = displaySize*2;
+      ctx.beginPath(); ctx.arc(d.x,d.y,r,0,Math.PI*2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle="black"; ctx.font="bold 14px sans-serif"; ctx.fillText(d.size+'"',d.x,d.y-5);
+      ctx.font="12px sans-serif"; ctx.fillText(label,d.x,d.y+12);
     }
   });
   updateList();
@@ -122,24 +123,21 @@ function updateList(){
     if(d.type=="Snare") label="SD";
     if(d.type=="Tom") label="TT";
     if(d.type=="Floor Tom") label="FT";
-    let text = d.size+'" '+label;
-    if(["Crash","Ride","HiHat","Splash","China"].includes(d.type))
-      cymHTML += text + "<br>";
-    else
-      drumHTML += text + "<br>";
+    let text = d.size+'" '+label+' <button onclick="deleteItem('+items.indexOf(d)+')">x</button>';
+    if(["Crash","Ride","HiHat","Splash","China"].includes(d.type)) cymHTML += text+"<br>";
+    else drumHTML += text+"<br>";
   });
   document.getElementById("list").innerHTML = drumHTML;
   document.getElementById("cymbalList").innerHTML = cymHTML;
 }
 
-// ADD処理
+// ADDボタン
 document.getElementById("addBtn").addEventListener("click", ()=>{
   const type = document.getElementById("typeSelect").value;
   const size = parseInt(document.getElementById("sizeInput").value);
   const depth = type==="Kick"?parseInt(document.getElementById("depthInput").value):0;
-  const color = ["Crash","Ride","HiHat","Splash","China"].includes(type) ? "#FFD700" : "#fff";
-  if(!size || (type==="Kick" && !depth))
-    return alert("サイズを正しく入力してください");
+  const color = ["Crash","Ride","HiHat","Splash","China"].includes(type)?"#FFD700":"#fff";
+  if(!size || (type==="Kick" && !depth)) return alert("サイズを正しく入力してください");
 
   const x = Math.max(30, Math.min(canvas.width-30, canvas.width/2));
   const y = Math.max(30, Math.min(canvas.height-30, canvas.height/2));
@@ -147,66 +145,54 @@ document.getElementById("addBtn").addEventListener("click", ()=>{
   draw();
 });
 
-// マウス/タッチ用ヘルパー
+// 削除
+function deleteItem(index){ items.splice(index,1); draw(); }
+
+// リセット
+document.getElementById("resetBtn").addEventListener("click", ()=>{ items=[]; draw(); });
+
+// マウス・タッチ座標
 function getPointerPos(e){
   const rect = canvas.getBoundingClientRect();
-  if(e.touches) {
-    return {
-      x: e.touches[0].clientX - rect.left,
-      y: e.touches[0].clientY - rect.top
-    };
-  }
-  return {
-    x: e.clientX - rect.left,
-    y: e.clientY - rect.top
-  };
+  if(e.touches){ return { x:e.touches[0].clientX-rect.left, y:e.touches[0].clientY-rect.top }; }
+  return { x:e.clientX-rect.left, y:e.clientY-rect.top };
 }
 
-// ドラッグ開始
-function startDrag(e){
-  e.preventDefault();
-  const pos = getPointerPos(e);
-  for(let i=items.length-1; i>=0; i--){
-    const d = items[i];
-    let hit=false;
-    if(d.type=="Kick"){
-      let w = d.size*3, h = d.depth*2;
-      hit = (pos.x > d.x-w/2 && pos.x < d.x+w/2 && pos.y > d.y-h/2 && pos.y < d.y+h/2);
-    } else {
-      hit = (Math.hypot(pos.x-d.x, pos.y-d.y) < d.size*2);
-    }
-    if(hit){
-      dragItem = d;
-      offsetX = pos.x - d.x;
-      offsetY = pos.y - d.y;
-      break;
-    }
+// ドラッグ
+function startDrag(e){ e.preventDefault(); const pos=getPointerPos(e);
+  for(let i=items.length-1;i>=0;i--){ const d=items[i]; let hit=false;
+    if(d.type=="Kick"){ let w=d.size*3,h=d.depth*2; hit=(pos.x>d.x-w/2 && pos.x<d.x+w/2 && pos.y>d.y-h/2 && pos.y<d.y+h/2);}
+    else{ hit=(Math.hypot(pos.x-d.x,pos.y-d.y)<(d.size+2)*2); }
+    if(hit){ dragItem=d; offsetX=pos.x-d.x; offsetY=pos.y-d.y; break; }
   }
 }
+function moveDrag(e){ if(!dragItem) return; const pos=getPointerPos(e); dragItem.x=pos.x-offsetX; dragItem.y=pos.y-offsetY; draw(); }
+function endDrag(){ dragItem=null; }
 
-// ドラッグ移動
-function moveDrag(e){
-  if(!dragItem) return;
-  const pos = getPointerPos(e);
-  dragItem.x = pos.x - offsetX;
-  dragItem.y = pos.y - offsetY;
-  draw();
-}
+canvas.addEventListener("mousedown",startDrag);
+canvas.addEventListener("mousemove",moveDrag);
+canvas.addEventListener("mouseup",endDrag);
+canvas.addEventListener("mouseleave",endDrag);
+canvas.addEventListener("touchstart",startDrag,{passive:false});
+canvas.addEventListener("touchmove",moveDrag,{passive:false});
+canvas.addEventListener("touchend",endDrag,{passive:false});
+canvas.addEventListener("touchcancel",endDrag,{passive:false});
 
-// ドラッグ終了
-function endDrag(){ dragItem = null; }
+// Depth欄表示制御
+const typeSelect=document.getElementById("typeSelect");
+const depthLabel=document.getElementById("depthLabel");
+const depthInput=document.getElementById("depthInput");
+typeSelect.addEventListener("change",()=>{
+  if(typeSelect.value==="Kick"){ depthLabel.style.display="block"; depthInput.style.display="block"; }
+  else{ depthLabel.style.display="none"; depthInput.style.display="none"; }
+});
 
-canvas.addEventListener("mousedown", startDrag);
-canvas.addEventListener("mousemove", moveDrag);
-canvas.addEventListener("mouseup", endDrag);
-canvas.addEventListener("mouseleave", endDrag);
-
-// タッチ対応
-canvas.addEventListener("touchstart", startDrag, {passive:false});
-canvas.addEventListener("touchmove", moveDrag, {passive:false});
-canvas.addEventListener("touchend", endDrag, {passive:false});
-canvas.addEventListener("touchcancel", endDrag, {passive:false});
-
+// パネル折りたたみ
+const foldBtn=document.getElementById("foldBtn");
+foldBtn.addEventListener("click",()=>{
+  panel.classList.toggle("folded");
+  resizeCanvas();
+});
 </script>
 </body>
 </html>
