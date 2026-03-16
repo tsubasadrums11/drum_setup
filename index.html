@@ -40,6 +40,7 @@ border-radius:50%;
 background:#ffd400;
 border:none;
 font-size:32px;
+box-shadow:0 4px 10px rgba(0,0,0,0.3);
 }
 
 </style>
@@ -112,12 +113,12 @@ items.forEach(d=>{
 
 let label=d.type
 
-if(d.type=="Kick") label="BD"
-if(d.type=="Snare") label="SD"
-if(d.type=="Tom") label="TT"
-if(d.type=="Floor Tom") label="FT"
+if(d.type==="Kick") label="BD"
+if(d.type==="Snare") label="SD"
+if(d.type==="Tom") label="TT"
+if(d.type==="Floor Tom") label="FT"
 
-if(d.type=="Kick"){
+if(d.type==="Kick"){
 
 let w=d.size*4
 let h=d.depth*3
@@ -136,7 +137,7 @@ ctx.fillStyle="black"
 ctx.textAlign="center"
 
 ctx.font="bold 16px sans-serif"
-ctx.fillText(d.size+'"×'+d.depth+'"',d.x,d.y-5)
+ctx.fillText(`${d.size}"×${d.depth}"`,d.x,d.y-5)
 
 ctx.font="13px sans-serif"
 ctx.fillText(label,d.x,d.y+15)
@@ -161,7 +162,7 @@ ctx.fillStyle="black"
 ctx.textAlign="center"
 
 ctx.font="bold 14px sans-serif"
-ctx.fillText(d.size+'"',d.x,d.y-5)
+ctx.fillText(`${d.size}"`,d.x,d.y-5)
 
 ctx.font="12px sans-serif"
 ctx.fillText(label,d.x,d.y+12)
@@ -183,17 +184,24 @@ items.forEach(d=>{
 
 let label=d.type
 
-if(d.type=="Kick") label="BD"
-if(d.type=="Snare") label="SD"
-if(d.type=="Tom") label="TT"
-if(d.type=="Floor Tom") label="FT"
+if(d.type==="Kick") label="BD"
+if(d.type==="Snare") label="SD"
+if(d.type==="Tom") label="TT"
+if(d.type==="Floor Tom") label="FT"
 
 let text=d.size+'" '+label
 
-if(d.type=="Crash"||d.type=="Ride"||d.type=="Splash"||d.type=="China"||d.type=="HiHat")
+if(
+d.type==="Crash"||
+d.type==="Ride"||
+d.type==="Splash"||
+d.type==="China"||
+d.type==="HiHat"
+){
 cymHTML+=text+"<br>"
-else
+}else{
 drumHTML+=text+"<br>"
+}
 
 })
 
