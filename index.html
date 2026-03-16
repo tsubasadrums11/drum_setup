@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Drum Setup</title>
+
+<style>
+
+body{
+margin:0;
+background:#111;
+color:white;
+font-family:sans-serif;
+}
+
+#toolbar{
+background:#222;
+padding:10px;
+display:flex;
+gap:6px;
+flex-wrap:wrap;
+}
+
+button,select,input{
+padding:6px;
+border-radius:6px;
+border:none;
+}
+
+button{
+background:#444;
+color:white;
+}
+
+canvas{
+display:block;
+background:#1a1a1a;
+}
+
+</style>
+</head>
+
+<body>
+
+<div id="toolbar">
+
+<select id="type">
+<option>Tom</option>
+<option>Snare</option>
+<option>Kick</option>
+<option>Crash</option>
+<option>Ride</option>
+<option>HiHat</option>
+</select>
+
+<input id="size" type="number" value="10"> inch
+
+<input id="color" type="color" value="#ffffff">
+
+<button onclick="addItem()">追加</button>
+
+</div>
+
+<canvas id="canvas"></canvas>
+
+<script>
+
+const canvas = document.getElementById("canvas")
+const ctx = canvas.getContext("2d")
+
+canvas.width = window.innerWidth
+canvas.height = window.innerHeight - 80
+
+let items = []
+
+function addItem(){
+
+let size = parseFloat(document.getElementById("size").value)
+let color = document.getElementById("color").value
+let type = document.getElementById("type").value
+
+items.push({
+x: canvas.width/2,
+y: canvas.height/2,
+size: size,
+color: color,
+type: type
+})
+
+draw()
+
+}
+
+function draw(){
+
+ctx.clearRect(0,0,canvas.width,canvas.height)
+
+items.forEach(d=>{
+
+let r = d.size3
+
+ctx.beginPath()
+ctx.arc(d.x,d.y,r,0,Math.PI2)
+
+ctx.fillStyle = d.color
+ctx.fill()
+
+ctx.strokeStyle = "white"
+ctx.stroke()
+
+ctx.fillStyle="white"
+ctx.font="12px sans-serif"
+
+ctx.fillText(d.type+" "+d.size+'"',d.x-r,d.y-r)
+
+})
+
+}
+
+</script>
+
+</body>
+</html>
