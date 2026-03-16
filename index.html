@@ -5,31 +5,29 @@
 <style>
 body { margin:0; font-family:sans-serif; background:#eee; overflow:hidden; }
 
-/* 上部パネル固定 */
+/* 上部パネル */
 #panel {
-  position: fixed; top:0; left:0; width:100%; height:180px;
+  position: fixed; top:0; left:0; width:100%; 
   background:#f5f5f5; padding:10px; box-sizing:border-box;
-  overflow:auto; display:flex; flex-wrap:wrap; align-items:flex-start;
-  gap:10px;
-  z-index:10;
+  display:flex; flex-wrap:wrap; gap:10px; align-items:flex-start;
   border-bottom:2px solid #ccc;
+  z-index:10;
 }
-#panel > * { margin:3px; }
+#panel > div { display:flex; flex-direction:column; }
 
 #canvas {
-  position:absolute; top:180px; left:0;
-  width:100%; height:calc(100% - 180px);
+  position:absolute; top:auto; left:0;
+  width:100%; height:calc(100% - var(--panelHeight,180px));
 }
 
 button { cursor:pointer; }
-input, select { min-width:50px; }
+input, select { min-width:50px; margin:2px 0; }
 
 #addBtn {
   background:#ffd400; border:none; font-size:24px; font-weight:bold;
   padding:8px 12px; border-radius:8px; box-shadow:0 2px 4px rgba(0,0,0,0.3);
 }
 #resetBtn { background:#f88; border:none; font-size:14px; padding:4px 8px; border-radius:5px; }
-
 </style>
 </head>
 <body>
@@ -45,7 +43,7 @@ input, select { min-width:50px; }
   </div>
   <div>
     <h4>Add Drum/Cymbal</h4>
-    <label>Type:</label><br>
+    <label>Type:</label>
     <select id="typeSelect">
       <option>Kick</option>
       <option>Snare</option>
@@ -56,11 +54,11 @@ input, select { min-width:50px; }
       <option>HiHat</option>
       <option>Splash</option>
       <option>China</option>
-    </select><br>
-    <label>Size (inch):</label><br>
-    <input id="sizeInput" type="number"><br>
-    <label id="depthLabel">Depth (inch, Kick only):</label><br>
-    <input id="depthInput" type="number"><br>
+    </select>
+    <label>Size (inch):</label>
+    <input id="sizeInput" type="number">
+    <label id="depthLabel">Depth (inch, Kick only):</label>
+    <input id="depthInput" type="number">
     <button id="addBtn">＋ Add</button>
     <button id="resetBtn">Reset All</button>
   </div>
@@ -71,25 +69,33 @@ input, select { min-width:50px; }
 <script>
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
+const panel = document.getElementById("panel");
 
 let items = [];
 let dragItem = null, offsetX=0, offsetY=0;
 
-function resizeCanvas(){
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight - 180;
-  canvas.style.top = "180px";
-  draw();
+function updatePanelHeight(){
+  const h = panel.offsetHeight;
+  document.documentElement.style.setProperty('--panelHeight', h+'px');
+  canvas.style.top = h+'px';
+  canvas.height = window.innerHeight - h;
 }
-window.addEventListener("resize", resizeCanvas);
+window.addEventListener("resize", updatePanelHeight);
+
+function resizeCanvas(){ 
+  canvas.width = window.innerWidth; 
+  updatePanelHeight();
+}
 resizeCanvas();
 
+// グリッド
 function drawGrid(){
   let size=50; ctx.strokeStyle="#ccc";
   for(let x=0;x<canvas.width;x+=size){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,canvas.height);ctx.stroke();}
   for(let y=0;y<canvas.height;y+=size){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(canvas.width,y);ctx.stroke();}
 }
 
+// 描画
 function draw(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
   drawGrid();
@@ -102,9 +108,9 @@ function draw(){
 
     ctx.lineWidth=3; ctx.strokeStyle="black"; ctx.textAlign="center";
 
-    if(d.type=="Kick"){ // バスドラ縦長四角
-      let w = d.size * 3; // 横方向拡大
-      let h = d.depth * 4; // 縦方向拡大
+    if(d.type=="Kick"){
+      let w = d.size * 4.5; // 横幅大きめ
+      let h = d.depth * 4;   // 縦長
       ctx.beginPath();
       ctx.rect(d.x - w/2, d.y - h/2, w, h);
       ctx.fillStyle=d.color;
@@ -115,7 +121,7 @@ function draw(){
       ctx.fillText(d.size+'"×'+d.depth+'"', d.x, d.y-5);
       ctx.font="13px sans-serif";
       ctx.fillText("BD", d.x, d.y+15);
-    } else { // 丸ドラム＆シンバル
+    } else {
       let r=(d.size+2)*2;
       ctx.beginPath();
       ctx.arc(d.x,d.y,r,0,Math.PI*2);
@@ -132,6 +138,7 @@ function draw(){
   updateList();
 }
 
+// リスト更新
 function updateList(){
   let drumHTML="", cymHTML="";
   items.forEach(d=>{
@@ -148,11 +155,12 @@ function updateList(){
   document.getElementById("cymbalList").innerHTML=cymHTML;
 }
 
+// ADDボタン
 document.getElementById("addBtn").addEventListener("click", ()=>{
-  const type=document.getElementById("typeSelect").value;
-  const size=parseInt(document.getElementById("sizeInput").value);
-  const depth=type==="Kick"?parseInt(document.getElementById("depthInput").value):0;
-  const color=["Crash","Ride","HiHat","Splash","China"].includes(type)?"#FFD700":"#fff";
+  const type = document.getElementById("typeSelect").value;
+  const size = parseInt(document.getElementById("sizeInput").value);
+  const depth = type==="Kick"?parseInt(document.getElementById("depthInput").value):0;
+  const color = ["Crash","Ride","HiHat","Splash","China"].includes(type)?"#FFD700":"#fff";
   if(!size||(type==="Kick"&&!depth)) return alert("サイズを正しく入力してください");
   const x = Math.max(30,Math.min(canvas.width-30,canvas.width/2));
   const y = Math.max(30,Math.min(canvas.height-30,canvas.height/2));
@@ -160,6 +168,7 @@ document.getElementById("addBtn").addEventListener("click", ()=>{
   draw();
 });
 
+// 削除・リセット
 function deleteItem(i){ items.splice(i,1); draw(); }
 document.getElementById("resetBtn").addEventListener("click",()=>{ items=[]; draw(); });
 
@@ -167,7 +176,7 @@ document.getElementById("resetBtn").addEventListener("click",()=>{ items=[]; dra
 function getPointerPos(e){ const rect=canvas.getBoundingClientRect(); return e.touches?{x:e.touches[0].clientX-rect.left,y:e.touches[0].clientY-rect.top}:{x:e.clientX-rect.left,y:e.clientY-rect.top}; }
 function startDrag(e){ e.preventDefault(); const pos=getPointerPos(e);
   for(let i=items.length-1;i>=0;i--){ const d=items[i]; let hit=false;
-    if(d.type=="Kick"){ let w=d.size*3,h=d.depth*4; hit=(pos.x>d.x-w/2&&pos.x<d.x+w/2&&pos.y>d.y-h/2&&pos.y<d.y+h/2);}
+    if(d.type=="Kick"){ let w=d.size*4.5,h=d.depth*4; hit=(pos.x>d.x-w/2&&pos.x<d.x+w/2&&pos.y>d.y-h/2&&pos.y<d.y+h/2);}
     else hit=(Math.hypot(pos.x-d.x,pos.y-d.y)<(d.size+2)*2);
     if(hit){ dragItem=d; offsetX=pos.x-d.x; offsetY=pos.y-d.y; break; }
   }
