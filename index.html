@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html>
+<html lang="ja">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Drum Setup</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Drum Setup Manager</title>
 
 <style>
 
@@ -18,8 +18,8 @@ font-family:sans-serif;
 background:#222;
 padding:10px;
 display:flex;
-gap:6px;
 flex-wrap:wrap;
+gap:6px;
 }
 
 button,select,input{
@@ -36,10 +36,10 @@ color:white;
 canvas{
 display:block;
 background:#1a1a1a;
+touch-action:none;
 }
 
 </style>
-
 </head>
 
 <body>
@@ -48,18 +48,25 @@ background:#1a1a1a;
 
 <select id="type">
 <option>Tom</option>
+<option>Floor Tom</option>
 <option>Snare</option>
 <option>Kick</option>
 <option>Crash</option>
 <option>Ride</option>
+<option>Splash</option>
+<option>China</option>
+<option>Stack</option>
 <option>HiHat</option>
 </select>
 
-<input id="size" type="number" value="10">
+<input id="size" type="number" value="10"> inch
 
 <input id="color" type="color" value="#ffffff">
 
 <button onclick="addItem()">追加</button>
+<button onclick="deleteItem()">削除</button>
+<button onclick="resetItems()">リセット</button>
+<button onclick="savePNG()">PNG保存</button>
 
 </div>
 
@@ -67,19 +74,28 @@ background:#1a1a1a;
 
 <script>
 
-const canvas = document.getElementById("canvas")
-const ctx = canvas.getContext("2d")
+const canvas=document.getElementById("canvas")
+const ctx=canvas.getContext("2d")
 
-canvas.width = window.innerWidth
-canvas.height = window.innerHeight - 70
+let items=[]
+let selected=null
+let dragging=false
 
-let items = []
+function resizeCanvas(){
+canvas.width=window.innerWidth
+canvas.height=window.innerHeight-70
+draw()
+}
+
+window.addEventListener("resize",resizeCanvas)
+
+resizeCanvas()
 
 function addItem(){
 
-let size = parseFloat(document.getElementById("size").value)
-let color = document.getElementById("color").value
-let type = document.getElementById("type").value
+let type=document.getElementById("type").value
+let size=parseFloat(document.getElementById("size").value)
+let color=document.getElementById("color").value
 
 items.push({
 x:canvas.width/2,
@@ -93,31 +109,158 @@ draw()
 
 }
 
+function deleteItem(){
+
+if(selected!==null){
+items.splice(selected,1)
+selected=null
+draw()
+}
+
+}
+
+function resetItems(){
+
+items=[]
+selected=null
+draw()
+
+}
+
+function savePNG(){
+
+let link=document.createElement("a")
+link.download="drum_setup.png"
+link.href=canvas.toDataURL()
+link.click()
+
+}
+
 function draw(){
 
 ctx.clearRect(0,0,canvas.width,canvas.height)
 
-items.forEach(d=>{
+items.forEach((d,i)=>{
 
-let r = d.size*3
+let r=d.size*3
 
 ctx.beginPath()
 ctx.arc(d.x,d.y,r,0,Math.PI*2)
 
-ctx.fillStyle = d.color
+ctx.fillStyle=d.color
 ctx.fill()
 
-ctx.strokeStyle="white"
+ctx.lineWidth=2
+ctx.strokeStyle=i===selected?"yellow":"white"
 ctx.stroke()
 
 ctx.fillStyle="white"
 ctx.font="12px sans-serif"
-
-ctx.fillText(d.type+" "+d.size+'"',d.x-r,d.y-r)
+ctx.fillText(d.type+" "+d.size+'"',d.x-r,d.y-r-5)
 
 })
 
 }
+
+function getMousePos(e){
+
+const rect=canvas.getBoundingClientRect()
+
+return{
+x:e.clientX-rect.left,
+y:e.clientY-rect.top
+}
+
+}
+
+canvas.addEventListener("mousedown",e=>{
+
+let pos=getMousePos(e)
+
+selected=null
+
+items.forEach((d,i)=>{
+
+let r=d.size*3
+
+let dist=Math.hypot(pos.x-d.x,pos.y-d.y)
+
+if(dist<r){
+selected=i
+dragging=true
+}
+
+})
+
+draw()
+
+})
+
+canvas.addEventListener("mousemove",e=>{
+
+if(!dragging||selected===null) return
+
+let pos=getMousePos(e)
+
+items[selected].x=pos.x
+items[selected].y=pos.y
+
+draw()
+
+})
+
+canvas.addEventListener("mouseup",()=>{
+
+dragging=false
+
+})
+
+canvas.addEventListener("touchstart",e=>{
+
+let rect=canvas.getBoundingClientRect()
+
+let x=e.touches[0].clientX-rect.left
+let y=e.touches[0].clientY-rect.top
+
+selected=null
+
+items.forEach((d,i)=>{
+
+let r=d.size*3
+
+let dist=Math.hypot(x-d.x,y-d.y)
+
+if(dist<r){
+selected=i
+dragging=true
+}
+
+})
+
+draw()
+
+})
+
+canvas.addEventListener("touchmove",e=>{
+
+if(!dragging||selected===null) return
+
+let rect=canvas.getBoundingClientRect()
+
+items[selected].x=e.touches[0].clientX-rect.left
+items[selected].y=e.touches[0].clientY-rect.top
+
+draw()
+
+})
+
+canvas.addEventListener("touchend",()=>{
+
+dragging=false
+
+})
+
+draw()
 
 </script>
 
