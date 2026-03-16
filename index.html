@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>Drum Setup Manager</title>
 
 <style>
@@ -60,12 +60,17 @@ touch-action:none;
 </select>
 
 <input id="size" type="number" value="10"> inch
-
 <input id="color" type="color" value="#ffffff">
 
 <button onclick="addItem()">追加</button>
 <button onclick="deleteItem()">削除</button>
-<button onclick="resetItems()">リセット</button>
+<button onclick="resetItems()">全消去</button>
+
+<button onclick="toggleGrid()">グリッド</button>
+
+<button onclick="saveSetup()">保存</button>
+<button onclick="loadSetup()">ロード</button>
+
 <button onclick="savePNG()">PNG保存</button>
 
 </div>
@@ -80,6 +85,7 @@ const ctx=canvas.getContext("2d")
 let items=[]
 let selected=null
 let dragging=false
+let grid=true
 
 function resizeCanvas(){
 canvas.width=window.innerWidth
@@ -127,6 +133,30 @@ draw()
 
 }
 
+function toggleGrid(){
+
+grid=!grid
+draw()
+
+}
+
+function saveSetup(){
+
+localStorage.setItem("drumSetup",JSON.stringify(items))
+
+}
+
+function loadSetup(){
+
+let data=localStorage.getItem("drumSetup")
+
+if(data){
+items=JSON.parse(data)
+draw()
+}
+
+}
+
 function savePNG(){
 
 let link=document.createElement("a")
@@ -136,9 +166,37 @@ link.click()
 
 }
 
+function drawGrid(){
+
+let size=40
+
+ctx.strokeStyle="#222"
+
+for(let x=0;x<canvas.width;x+=size){
+
+ctx.beginPath()
+ctx.moveTo(x,0)
+ctx.lineTo(x,canvas.height)
+ctx.stroke()
+
+}
+
+for(let y=0;y<canvas.height;y+=size){
+
+ctx.beginPath()
+ctx.moveTo(0,y)
+ctx.lineTo(canvas.width,y)
+ctx.stroke()
+
+}
+
+}
+
 function draw(){
 
 ctx.clearRect(0,0,canvas.width,canvas.height)
+
+if(grid) drawGrid()
 
 items.forEach((d,i)=>{
 
@@ -182,7 +240,6 @@ selected=null
 items.forEach((d,i)=>{
 
 let r=d.size*3
-
 let dist=Math.hypot(pos.x-d.x,pos.y-d.y)
 
 if(dist<r){
@@ -227,7 +284,6 @@ selected=null
 items.forEach((d,i)=>{
 
 let r=d.size*3
-
 let dist=Math.hypot(x-d.x,y-d.y)
 
 if(dist<r){
