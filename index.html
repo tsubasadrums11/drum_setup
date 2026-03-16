@@ -39,6 +39,16 @@ background:#1a1a1a;
 touch-action:none;
 }
 
+#legend{
+position:absolute;
+left:10px;
+top:80px;
+background:rgba(0,0,0,0.6);
+padding:10px;
+border-radius:6px;
+font-size:14px;
+}
+
 </style>
 </head>
 
@@ -60,20 +70,18 @@ touch-action:none;
 </select>
 
 <input id="size" type="number" value="10"> inch
+
 <input id="color" type="color" value="#ffffff">
 
 <button onclick="addItem()">追加</button>
 <button onclick="deleteItem()">削除</button>
 <button onclick="resetItems()">全消去</button>
-
 <button onclick="toggleGrid()">グリッド</button>
-
-<button onclick="saveSetup()">保存</button>
-<button onclick="loadSetup()">ロード</button>
-
 <button onclick="savePNG()">PNG保存</button>
 
 </div>
+
+<div id="legend"></div>
 
 <canvas id="canvas"></canvas>
 
@@ -81,6 +89,7 @@ touch-action:none;
 
 const canvas=document.getElementById("canvas")
 const ctx=canvas.getContext("2d")
+const legend=document.getElementById("legend")
 
 let items=[]
 let selected=null
@@ -140,23 +149,6 @@ draw()
 
 }
 
-function saveSetup(){
-
-localStorage.setItem("drumSetup",JSON.stringify(items))
-
-}
-
-function loadSetup(){
-
-let data=localStorage.getItem("drumSetup")
-
-if(data){
-items=JSON.parse(data)
-draw()
-}
-
-}
-
 function savePNG(){
 
 let link=document.createElement("a")
@@ -192,6 +184,20 @@ ctx.stroke()
 
 }
 
+function updateLegend(){
+
+let text=""
+
+items.forEach(d=>{
+
+text+=d.type+" "+d.size+"\"<br>"
+
+})
+
+legend.innerHTML=text
+
+}
+
 function draw(){
 
 ctx.clearRect(0,0,canvas.width,canvas.height)
@@ -212,11 +218,9 @@ ctx.lineWidth=2
 ctx.strokeStyle=i===selected?"yellow":"white"
 ctx.stroke()
 
-ctx.fillStyle="white"
-ctx.font="12px sans-serif"
-ctx.fillText(d.type+" "+d.size+'"',d.x-r,d.y-r-5)
-
 })
+
+updateLegend()
 
 }
 
@@ -240,6 +244,7 @@ selected=null
 items.forEach((d,i)=>{
 
 let r=d.size*3
+
 let dist=Math.hypot(pos.x-d.x,pos.y-d.y)
 
 if(dist<r){
@@ -284,6 +289,7 @@ selected=null
 items.forEach((d,i)=>{
 
 let r=d.size*3
+
 let dist=Math.hypot(x-d.x,y-d.y)
 
 if(dist<r){
