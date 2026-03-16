@@ -1,10 +1,12 @@
 <!DOCTYPE html>
 <html>
 <head>
+<meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Drum Setup</title>
 
 <style>
+
 body{
 margin:0;
 background:#111;
@@ -35,7 +37,9 @@ canvas{
 display:block;
 background:#1a1a1a;
 }
+
 </style>
+
 </head>
 
 <body>
@@ -51,7 +55,8 @@ background:#1a1a1a;
 <option>HiHat</option>
 </select>
 
-<input id="size" type="number" value="10"> inch
+<input id="size" type="number" value="10">
+
 <input id="color" type="color" value="#ffffff">
 
 <button onclick="addItem()">追加</button>
@@ -66,7 +71,7 @@ const canvas = document.getElementById("canvas")
 const ctx = canvas.getContext("2d")
 
 canvas.width = window.innerWidth
-canvas.height = window.innerHeight - 80
+canvas.height = window.innerHeight - 70
 
 let items = []
 
@@ -77,11 +82,11 @@ let color = document.getElementById("color").value
 let type = document.getElementById("type").value
 
 items.push({
-x: canvas.width/2,
-y: canvas.height/2,
-size: size,
-color: color,
-type: type
+x:canvas.width/2,
+y:canvas.height/2,
+size:size,
+color:color,
+type:type
 })
 
 draw()
@@ -102,7 +107,7 @@ ctx.arc(d.x,d.y,r,0,Math.PI*2)
 ctx.fillStyle = d.color
 ctx.fill()
 
-ctx.strokeStyle = "white"
+ctx.strokeStyle="white"
 ctx.stroke()
 
 ctx.fillStyle="white"
