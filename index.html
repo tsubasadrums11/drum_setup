@@ -6,7 +6,7 @@
 body{margin:0;font-family:sans-serif;background:#eee;overflow:hidden;}
 #panel{position:absolute;left:0;top:0;width:220px;height:100%;background:#f5f5f5;padding:15px;box-sizing:border-box;overflow:auto;}
 #canvas{position:absolute;left:220px;top:0;}
-#addBtn{position:absolute;right:20px;bottom:20px;width:60px;height:60px;border-radius:50%;background:#ffd400;border:none;font-size:32px;}
+button{margin-top:5px;}
 input{width:60px;margin:3px 0;}
 label{font-size:13px;}
 </style>
@@ -19,7 +19,7 @@ label{font-size:13px;}
 <h3>Cymbals</h3>
 <div id="cymbalList"></div>
 <hr>
-<h3>Edit Selected</h3>
+<h3>Add Drum/Cymbal</h3>
 <label>Type:</label>
 <select id="typeSelect">
   <option>Kick</option>
@@ -31,13 +31,12 @@ label{font-size:13px;}
 </select><br>
 <label>Size (inch):</label><br>
 <input id="sizeInput" type="number"><br>
-<label id="depthLabel">Depth (inch):</label><br>
+<label id="depthLabel">Depth (inch, Kick only):</label><br>
 <input id="depthInput" type="number"><br>
-<button id="applyBtn">Apply</button>
+<button id="addBtn">Add</button>
 </div>
 
 <canvas id="canvas"></canvas>
-<button id="addBtn">＋</button>
 
 <script>
 const canvas=document.getElementById("canvas");
@@ -45,25 +44,17 @@ const ctx=canvas.getContext("2d");
 canvas.width=window.innerWidth-220;
 canvas.height=window.innerHeight;
 
-let items=[
-  {x:400,y:300,type:"Kick",size:22,depth:18,color:"#ddd"},
-  {x:400,y:200,type:"Snare",size:14,color:"#fff"},
-  {x:300,y:150,type:"Tom",size:10,color:"#fff"},
-  {x:450,y:150,type:"Tom",size:12,color:"#fff"},
-  {x:550,y:300,type:"Floor Tom",size:16,color:"#fff"},
-  {x:250,y:80,type:"Crash",size:18,color:"#FFD700"},
-  {x:500,y:70,type:"Ride",size:20,color:"#FFD700"}
-];
-
+let items=[];
 let dragItem=null, offsetX=0, offsetY=0;
-let selectedItem=null;
 
+// 描画グリッド
 function drawGrid(){
   let size=50; ctx.strokeStyle="#ccc";
   for(let x=0;x<canvas.width;x+=size){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,canvas.height); ctx.stroke();}
   for(let y=0;y<canvas.height;y+=size){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(canvas.width,y); ctx.stroke();}
 }
 
+// 描画
 function draw(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
   drawGrid();
@@ -74,13 +65,10 @@ function draw(){
     if(d.type=="Tom") label="TT";
     if(d.type=="Floor Tom") label="FT";
 
-    ctx.lineWidth=3;
-    ctx.strokeStyle="black";
-    ctx.fillStyle=d.color;
-    ctx.textAlign="center";
+    ctx.lineWidth=3; ctx.strokeStyle="black"; ctx.fillStyle=d.color; ctx.textAlign="center";
 
     if(d.type=="Kick"){
-      let w=d.size*4, h=d.depth*3;
+      let w=d.size*4,h=d.depth*3;
       ctx.beginPath(); ctx.rect(d.x-w/2,d.y-h/2,w,h); ctx.fill(); ctx.stroke();
       ctx.fillStyle="black"; ctx.font="bold 16px sans-serif"; ctx.fillText(d.size+'"×'+d.depth+'"',d.x,d.y-5);
       ctx.font="13px sans-serif"; ctx.fillText(label,d.x,d.y+15);
@@ -90,16 +78,11 @@ function draw(){
       ctx.fillStyle="black"; ctx.font="bold 14px sans-serif"; ctx.fillText(d.size+'"',d.x,d.y-5);
       ctx.font="12px sans-serif"; ctx.fillText(label,d.x,d.y+12);
     }
-    // 選択中を強調
-    if(d===selectedItem){
-      ctx.strokeStyle="red";
-      if(d.type=="Kick") ctx.strokeRect(d.x-d.size*2,d.y-d.depth*1.5,d.size*4,d.depth*3);
-      else ctx.beginPath(), ctx.arc(d.x,d.y,d.size*2,0,Math.PI*2), ctx.stroke();
-    }
   });
   updateList();
 }
 
+// リスト更新
 function updateList(){
   let drumHTML="", cymHTML="";
   items.forEach(d=>{
@@ -109,7 +92,7 @@ function updateList(){
     if(d.type=="Tom") label="TT";
     if(d.type=="Floor Tom") label="FT";
     let text=d.size+'" '+label;
-    if(d.type=="Crash"||d.type=="Ride"||d.type=="Splash"||d.type=="China"||d.type=="HiHat") cymHTML+=text+"<br>";
+    if(d.type=="Crash"||d.type=="Ride") cymHTML+=text+"<br>";
     else drumHTML+=text+"<br>";
   });
   document.getElementById("list").innerHTML=drumHTML;
@@ -118,42 +101,30 @@ function updateList(){
 
 draw();
 
-// 追加ボタン
+// ドラム追加ボタン
 document.getElementById("addBtn").addEventListener("click",()=>{
-  const types=["Kick","Snare","Tom","Floor Tom","Crash","Ride"];
-  const type=types[Math.floor(Math.random()*types.length)];
-  const size=Math.floor(Math.random()*10)+10;
-  const depth=type=="Kick"?Math.floor(Math.random()*10)+15:0;
-  const color=(type=="Crash"||type=="Ride")?"#FFD700":"#fff";
-  const x=Math.random()*(canvas.width-100)+50;
-  const y=Math.random()*(canvas.height-100)+50;
-  const newItem={x,y,type,size,depth,color};
-  items.push(newItem);
-  selectedItem=newItem;
-  updateInputs();
+  const type=document.getElementById("typeSelect").value;
+  const size=parseInt(document.getElementById("sizeInput").value);
+  const depth=type==="Kick"?parseInt(document.getElementById("depthInput").value):0;
+  const color=(type==="Crash"||type==="Ride")?"#FFD700":"#fff";
+  if(!size || (type==="Kick" && !depth)) return alert("サイズを正しく入力してください");
+
+  const x=canvas.width/2, y=canvas.height/2;
+  items.push({x,y,type,size,depth,color});
   draw();
 });
 
 // ドラッグ処理
 canvas.addEventListener("mousedown",e=>{
   const rect=canvas.getBoundingClientRect();
-  const mx=e.clientX-rect.left, my=e.clientY-rect.top;
+  const mx=e.clientX-rect.left,my=e.clientY-rect.top;
   for(let i=items.length-1;i>=0;i--){
-    const d=items[i];
-    let hit=false;
+    const d=items[i]; let hit=false;
     if(d.type=="Kick") hit=(mx>d.x-d.size*2 && mx<d.x+d.size*2 && my>d.y-d.depth*1.5 && my<d.y+d.depth*1.5);
     else hit=Math.hypot(mx-d.x,my-d.y)<d.size*2;
-    if(hit){
-      dragItem=d;
-      selectedItem=d;
-      offsetX=mx-d.x; offsetY=my-d.y;
-      updateInputs();
-      draw();
-      break;
-    }
+    if(hit){ dragItem=d; offsetX=mx-d.x; offsetY=my-d.y; break; }
   }
 });
-
 canvas.addEventListener("mousemove",e=>{
   if(dragItem){
     const rect=canvas.getBoundingClientRect();
@@ -165,40 +136,13 @@ canvas.addEventListener("mousemove",e=>{
 canvas.addEventListener("mouseup",()=>{ dragItem=null; });
 canvas.addEventListener("mouseleave",()=>{ dragItem=null; });
 
-// 入力欄
+// Depth欄表示制御
 const typeSelect=document.getElementById("typeSelect");
-const sizeInput=document.getElementById("sizeInput");
-const depthInput=document.getElementById("depthInput");
 const depthLabel=document.getElementById("depthLabel");
-const applyBtn=document.getElementById("applyBtn");
-
-function updateInputs(){
-  if(!selectedItem) return;
-  typeSelect.value=selectedItem.type;
-  sizeInput.value=selectedItem.size;
-  if(selectedItem.type=="Kick"){
-    depthLabel.style.display="block";
-    depthInput.style.display="block";
-    depthInput.value=selectedItem.depth;
-  } else {
-    depthLabel.style.display="none";
-    depthInput.style.display="none";
-  }
-}
-
+const depthInput=document.getElementById("depthInput");
 typeSelect.addEventListener("change",()=>{
-  if(!selectedItem) return;
-  selectedItem.type=typeSelect.value;
-  if(selectedItem.type=="Kick"){ depthLabel.style.display="block"; depthInput.style.display="block"; }
-  else { depthLabel.style.display="none"; depthInput.style.display="none"; selectedItem.depth=0; }
-  draw();
-});
-
-applyBtn.addEventListener("click",()=>{
-  if(!selectedItem) return;
-  selectedItem.size=parseInt(sizeInput.value)||selectedItem.size;
-  if(selectedItem.type=="Kick") selectedItem.depth=parseInt(depthInput.value)||selectedItem.depth;
-  draw();
+  if(typeSelect.value==="Kick"){ depthLabel.style.display="block"; depthInput.style.display="block"; }
+  else{ depthLabel.style.display="none"; depthInput.style.display="none"; }
 });
 </script>
 </body>
