@@ -7,7 +7,7 @@ body{margin:0;font-family:sans-serif;background:#eee;overflow:hidden;}
 #panel{
   position:absolute; left:0; top:0; width:220px; height:100%;
   background:#f5f5f5; padding:10px; box-sizing:border-box;
-  overflow:auto; transition:0.3s;
+  overflow:auto; transition:width 0.3s, padding 0.3s;
 }
 #panel.folded{width:40px; padding:5px;}
 #canvas{position:absolute; top:0; background:#eee;}
@@ -86,7 +86,7 @@ function drawGrid(){
   for(let y=0;y<canvas.height;y+=size){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(canvas.width,y); ctx.stroke();}
 }
 
-// 描画（＋2インチ表示）
+// 描画
 function draw(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
   drawGrid();
@@ -100,14 +100,21 @@ function draw(){
     ctx.lineWidth = 3; ctx.strokeStyle = "black"; ctx.fillStyle = d.color; ctx.textAlign="center";
 
     if(d.type=="Kick"){
-      let w = displaySize*3, h = d.depth*2;
-      ctx.beginPath(); ctx.rect(d.x-w/2,d.y-h/2,w,h); ctx.fill(); ctx.stroke();
-      ctx.fillStyle="black"; ctx.font="bold 16px sans-serif"; ctx.fillText(d.size+'"×'+d.depth+'"',d.x,d.y-5);
+      // バスドラは縦2倍、横1.5倍
+      let w = (displaySize) * 1.5;
+      let h = (d.depth) * 2;
+      ctx.beginPath(); 
+      ctx.rect(d.x - w/2, d.y - h/2, w, h);
+      ctx.fill(); ctx.stroke();
+      ctx.fillStyle="black"; ctx.font="bold 16px sans-serif";
+      ctx.fillText(d.size+'"×'+d.depth+'"', d.x, d.y-5);
       ctx.font="13px sans-serif"; ctx.fillText(label,d.x,d.y+15);
     } else {
       let r = displaySize*2;
-      ctx.beginPath(); ctx.arc(d.x,d.y,r,0,Math.PI*2); ctx.fill(); ctx.stroke();
-      ctx.fillStyle="black"; ctx.font="bold 14px sans-serif"; ctx.fillText(d.size+'"',d.x,d.y-5);
+      ctx.beginPath(); ctx.arc(d.x,d.y,r,0,Math.PI*2);
+      ctx.fill(); ctx.stroke();
+      ctx.fillStyle="black"; ctx.font="bold 14px sans-serif";
+      ctx.fillText(d.size+'"', d.x, d.y-5);
       ctx.font="12px sans-serif"; ctx.fillText(label,d.x,d.y+12);
     }
   });
@@ -147,7 +154,6 @@ document.getElementById("addBtn").addEventListener("click", ()=>{
 
 // 削除
 function deleteItem(index){ items.splice(index,1); draw(); }
-
 // リセット
 document.getElementById("resetBtn").addEventListener("click", ()=>{ items=[]; draw(); });
 
@@ -161,7 +167,7 @@ function getPointerPos(e){
 // ドラッグ
 function startDrag(e){ e.preventDefault(); const pos=getPointerPos(e);
   for(let i=items.length-1;i>=0;i--){ const d=items[i]; let hit=false;
-    if(d.type=="Kick"){ let w=d.size*3,h=d.depth*2; hit=(pos.x>d.x-w/2 && pos.x<d.x+w/2 && pos.y>d.y-h/2 && pos.y<d.y+h/2);}
+    if(d.type=="Kick"){ let w=(d.size+2)*1.5,h=d.depth*2; hit=(pos.x>d.x-w/2 && pos.x<d.x+w/2 && pos.y>d.y-h/2 && pos.y<d.y+h/2);}
     else{ hit=(Math.hypot(pos.x-d.x,pos.y-d.y)<(d.size+2)*2); }
     if(hit){ dragItem=d; offsetX=pos.x-d.x; offsetY=pos.y-d.y; break; }
   }
@@ -187,10 +193,11 @@ typeSelect.addEventListener("change",()=>{
   else{ depthLabel.style.display="none"; depthInput.style.display="none"; }
 });
 
-// パネル折りたたみ
+// パネル折りたたみ修正
 const foldBtn=document.getElementById("foldBtn");
 foldBtn.addEventListener("click",()=>{
-  panel.classList.toggle("folded");
+  const isFolded = panel.classList.toggle("folded");
+  panel.style.width = isFolded ? "40px" : "220px";
   resizeCanvas();
 });
 </script>
