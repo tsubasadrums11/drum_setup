@@ -11,6 +11,7 @@ margin:0;
 font-family:sans-serif;
 background:#111;
 color:white;
+overflow:hidden;
 }
 
 #toolbar{
@@ -35,6 +36,7 @@ color:white;
 #canvas{
 background:#1a1a1a;
 touch-action:none;
+display:block;
 }
 
 </style>
@@ -62,7 +64,6 @@ touch-action:none;
 
 <button onclick="addItem()">追加</button>
 <button onclick="deleteItem()">削除</button>
-
 <button onclick="toggleGrid()">Grid</button>
 <button onclick="toggleStand()">Stand</button>
 
@@ -70,12 +71,11 @@ touch-action:none;
 
 <button onclick="saveSetup()">保存</button>
 <button onclick="loadSetup()">読込</button>
-
 <button onclick="savePNG()">PNG</button>
 
 </div>
 
-<canvas id="canvas" width="900" height="600"></canvas>
+<canvas id="canvas"></canvas>
 
 <script>
 
@@ -88,6 +88,18 @@ let selected=null
 let grid=true
 let stand=true
 
+function resizeCanvas(){
+
+canvas.width=window.innerWidth
+canvas.height=window.innerHeight-70
+
+draw()
+
+}
+
+window.addEventListener("resize",resizeCanvas)
+resizeCanvas()
+
 function addItem(){
 
 let type=document.getElementById("type").value
@@ -95,8 +107,8 @@ let size=parseFloat(document.getElementById("size").value)
 let color=document.getElementById("color").value
 
 items.push({
-x:200,
-y:200,
+x:canvas.width/2,
+y:canvas.height/2,
 size:size,
 color:color,
 type:type
@@ -111,20 +123,25 @@ function draw(){
 ctx.clearRect(0,0,canvas.width,canvas.height)
 
 if(grid){
+
 ctx.strokeStyle="#333"
 
 for(let x=0;x<canvas.width;x+=50){
+
 ctx.beginPath()
 ctx.moveTo(x,0)
 ctx.lineTo(x,canvas.height)
 ctx.stroke()
+
 }
 
 for(let y=0;y<canvas.height;y+=50){
+
 ctx.beginPath()
 ctx.moveTo(0,y)
 ctx.lineTo(canvas.width,y)
 ctx.stroke()
+
 }
 
 }
@@ -138,7 +155,7 @@ if(stand && d.type!=="Kick"){
 ctx.strokeStyle="#888"
 ctx.beginPath()
 ctx.moveTo(d.x,d.y)
-ctx.lineTo(d.x,d.y+50)
+ctx.lineTo(d.x,d.y+40)
 ctx.stroke()
 
 }
@@ -162,11 +179,40 @@ ctx.fillText(d.type+" "+d.size+'"',d.x-r,d.y-r-4)
 
 }
 
-canvas.onmousedown=e=>selectItem(e.offsetX,e.offsetY)
-canvas.onmousemove=e=>moveItem(e.offsetX,e.offsetY)
-canvas.onmouseup=()=>drag=null
+function getMousePos(evt){
 
-canvas.ontouchstart=e=>{
+const rect=canvas.getBoundingClientRect()
+
+return{
+x:evt.clientX-rect.left,
+y:evt.clientY-rect.top
+}
+
+}
+
+canvas.addEventListener("mousedown",e=>{
+
+let pos=getMousePos(e)
+selectItem(pos.x,pos.y)
+
+})
+
+canvas.addEventListener("mousemove",e=>{
+
+if(!drag)return
+
+let pos=getMousePos(e)
+
+drag.x=pos.x
+drag.y=pos.y
+
+draw()
+
+})
+
+canvas.addEventListener("mouseup",()=>drag=null)
+
+canvas.addEventListener("touchstart",e=>{
 
 let rect=canvas.getBoundingClientRect()
 
@@ -175,9 +221,9 @@ let y=e.touches[0].clientY-rect.top
 
 selectItem(x,y)
 
-}
+})
 
-canvas.ontouchmove=e=>{
+canvas.addEventListener("touchmove",e=>{
 
 if(!drag)return
 
@@ -188,9 +234,9 @@ drag.y=e.touches[0].clientY-rect.top
 
 draw()
 
-}
+})
 
-canvas.ontouchend=()=>drag=null
+canvas.addEventListener("touchend",()=>drag=null)
 
 function selectItem(x,y){
 
@@ -213,19 +259,6 @@ selected=d
 })
 
 draw()
-
-}
-
-function moveItem(x,y){
-
-if(drag){
-
-drag.x=x
-drag.y=y
-
-draw()
-
-}
 
 }
 
