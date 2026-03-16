@@ -4,26 +4,18 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
 body{margin:0;font-family:sans-serif;background:#eee;overflow:hidden;}
-#panel{position:absolute;left:0;top:0;width:220px;height:100%;background:#f5f5f5;padding:15px;box-sizing:border-box;overflow:auto;}
-#canvas{position:absolute;left:220px;top:0;}
+#panel{
+  position:absolute; background:#f5f5f5; padding:10px; box-sizing:border-box; overflow:auto;
+  transition:all 0.2s;
+}
+#canvas{position:absolute; background:#eee;}
 button{margin-top:5px;}
 input{width:60px;margin:3px 0;}
 label{font-size:13px;}
-
-/* ADDボタンを目立たせる */
 #addBtn{
-  position:absolute;
-  right:20px;
-  bottom:20px;
-  width:70px;
-  height:70px;
-  border-radius:50%;
-  background:#ffd400;
-  border:none;
-  font-size:24px;
-  font-weight:bold;
-  cursor:pointer;
-  box-shadow:0 4px 6px rgba(0,0,0,0.3);
+  position:absolute; right:20px; bottom:20px; width:70px; height:70px;
+  border-radius:50%; background:#ffd400; border:none;
+  font-size:24px; font-weight:bold; cursor:pointer; box-shadow:0 4px 6px rgba(0,0,0,0.3);
   transition:0.2s;
 }
 #addBtn:hover{transform:scale(1.1);}
@@ -62,13 +54,40 @@ label{font-size:13px;}
 <script>
 const canvas=document.getElementById("canvas");
 const ctx=canvas.getContext("2d");
-canvas.width=window.innerWidth-220;
-canvas.height=window.innerHeight;
+const panel=document.getElementById("panel");
+
+// レスポンシブ配置
+function resizeCanvas(){
+  if(window.innerWidth < window.innerHeight){
+    // 縦画面：パネル上部
+    panel.style.width="100%";
+    panel.style.height="220px";
+    panel.style.left="0px";
+    panel.style.top="0px";
+    canvas.style.left="0px";
+    canvas.style.top="220px";
+    canvas.width=window.innerWidth;
+    canvas.height=window.innerHeight-220;
+  } else {
+    // 横画面：パネル左
+    panel.style.width="220px";
+    panel.style.height="100%";
+    panel.style.left="0px";
+    panel.style.top="0px";
+    canvas.style.left="220px";
+    canvas.style.top="0px";
+    canvas.width=window.innerWidth-220;
+    canvas.height=window.innerHeight;
+  }
+  draw();
+}
+window.addEventListener("resize",resizeCanvas);
+resizeCanvas();
 
 let items=[];
 let dragItem=null, offsetX=0, offsetY=0;
 
-// グリッド描画
+// グリッド
 function drawGrid(){
   let size=50; ctx.strokeStyle="#ccc";
   for(let x=0;x<canvas.width;x+=size){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,canvas.height); ctx.stroke();}
@@ -113,22 +132,19 @@ function updateList(){
     if(d.type=="Tom") label="TT";
     if(d.type=="Floor Tom") label="FT";
     let text=d.size+'" '+label;
-    if(d.type=="Crash"||d.type=="Ride"||d.type=="HiHat"||d.type=="Splash"||d.type=="China") cymHTML+=text+"<br>";
+    if(["Crash","Ride","HiHat","Splash","China"].includes(d.type)) cymHTML+=text+"<br>";
     else drumHTML+=text+"<br>";
   });
   document.getElementById("list").innerHTML=drumHTML;
   document.getElementById("cymbalList").innerHTML=cymHTML;
 }
 
-draw();
-
-// ADDボタン処理
+// ADDボタン
 document.getElementById("addBtn").addEventListener("click",()=>{
   const type=document.getElementById("typeSelect").value;
   const size=parseInt(document.getElementById("sizeInput").value);
   const depth=type==="Kick"?parseInt(document.getElementById("depthInput").value):0;
-  const cymbals=["Crash","Ride","HiHat","Splash","China"];
-  const color=cymbals.includes(type)?"#FFD700":"#fff";
+  const color=["Crash","Ride","HiHat","Splash","China"].includes(type)?"#FFD700":"#fff";
   if(!size || (type==="Kick" && !depth)) return alert("サイズを正しく入力してください");
 
   const x=canvas.width/2, y=canvas.height/2;
@@ -136,23 +152,18 @@ document.getElementById("addBtn").addEventListener("click",()=>{
   draw();
 });
 
-// ドラッグ処理
+// ドラッグ
 canvas.addEventListener("mousedown",e=>{
   const rect=canvas.getBoundingClientRect();
-  const mx=e.clientX-rect.left,my=e.clientY-rect.top;
+  const mx=e.clientX-rect.left, my=e.clientY-rect.top;
   for(let i=items.length-1;i>=0;i--){
-    const d=items[i]; let hit=false;
-    if(d.type=="Kick"){
-      const w=d.size*3, h=d.depth*2;
-      hit=(mx>d.x-w/2 && mx<d.x+w/2 && my>d.y-h/2 && my<d.y+h/2);
-    } else {
-      const r=d.size*2;
-      hit=Math.hypot(mx-d.x,my-d.y)<r;
-    }
-    if(hit){ dragItem=d; offsetX=mx-d.x; offsetY=my-d.y; break; }
+    const d=items[i], hit = (d.type=="Kick") ?
+      (mx>d.x-d.size*1.5 && mx<d.x+d.size*1.5 && my>d.y-d.depth && my<d.y+d.depth) :
+      (Math.hypot(mx-d.x,my-d.y)<d.size*2);
+    if(hit){ dragItem=d; offsetX=mx-d.x; offsetY= my-d.y; break;}
   }
 });
-canvas.addEventListener("mousemove",e=>{
+canvas.addEventListener("mousemove", e=>{
   if(dragItem){
     const rect=canvas.getBoundingClientRect();
     dragItem.x=e.clientX-rect.left-offsetX;
@@ -160,8 +171,8 @@ canvas.addEventListener("mousemove",e=>{
     draw();
   }
 });
-canvas.addEventListener("mouseup",()=>{ dragItem=null; });
-canvas.addEventListener("mouseleave",()=>{ dragItem=null; });
+canvas.addEventListener("mouseup",()=>{dragItem=null;});
+canvas.addEventListener("mouseleave",()=>{dragItem=null;});
 
 // Depth欄表示制御
 const typeSelect=document.getElementById("typeSelect");
