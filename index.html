@@ -4,16 +4,22 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
 body{margin:0;font-family:sans-serif;background:#eee;overflow:hidden;}
+
 #panel{
   position:absolute; left:0; top:0; width:220px; height:100%;
   background:#f5f5f5; padding:10px; box-sizing:border-box;
   overflow:auto; transition:width 0.3s, padding 0.3s;
 }
 #panel.folded{width:40px; padding:5px;}
-#canvas{position:absolute; top:0; background:#eee;}
-button{margin-top:5px;}
+
+#canvas{
+  position:absolute; top:0; background:#eee;
+}
+
+button{margin-top:5px; cursor:pointer;}
 input, select{min-width:30px;margin:3px 0;}
 label{font-size:13px;}
+
 #addBtn{
   position:absolute; right:20px; bottom:20px; width:70px; height:70px;
   border-radius:50%; background:#ffd400; border:none; font-size:24px; font-weight:bold;
@@ -63,9 +69,10 @@ label{font-size:13px;}
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 const panel = document.getElementById("panel");
+
 let items = [];
 let dragItem = null;
-let offsetX = 0, offsetY = 0;
+let offsetX=0, offsetY=0;
 
 // Canvasサイズ調整
 function resizeCanvas(){
@@ -81,9 +88,9 @@ resizeCanvas();
 
 // グリッド描画
 function drawGrid(){
-  let size = 50; ctx.strokeStyle="#ccc";
-  for(let x=0;x<canvas.width;x+=size){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,canvas.height); ctx.stroke();}
-  for(let y=0;y<canvas.height;y+=size){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(canvas.width,y); ctx.stroke();}
+  let size=50; ctx.strokeStyle="#ccc";
+  for(let x=0;x<canvas.width;x+=size){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,canvas.height);ctx.stroke();}
+  for(let y=0;y<canvas.height;y+=size){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(canvas.width,y);ctx.stroke();}
 }
 
 // 描画
@@ -92,29 +99,38 @@ function draw(){
   drawGrid();
   items.forEach(d=>{
     let label = d.type;
-    if(d.type=="Kick") label = "BD";
-    if(d.type=="Snare") label = "SD";
-    if(d.type=="Tom") label = "TT";
-    if(d.type=="Floor Tom") label = "FT";
-    ctx.lineWidth = 3; ctx.strokeStyle = "black"; ctx.fillStyle = d.color; ctx.textAlign="center";
+    if(d.type=="Kick") label="BD";
+    if(d.type=="Snare") label="SD";
+    if(d.type=="Tom") label="TT";
+    if(d.type=="Floor Tom") label="FT";
 
-    if(d.type=="Kick"){
-      // バスドラ専用サイズ
-      let w = d.size*1.5;
-      let h = d.depth*2;
-      ctx.beginPath(); 
+    ctx.lineWidth=3; ctx.strokeStyle="black"; ctx.textAlign="center";
+
+    if(d.type=="Kick"){ // バスドラ四角
+      let w = d.size * 1.5;
+      let h = d.depth * 2;
+      ctx.beginPath();
       ctx.rect(d.x - w/2, d.y - h/2, w, h);
-      ctx.fill(); ctx.stroke();
-      ctx.fillStyle="black"; ctx.font="bold 16px sans-serif";
+      ctx.fillStyle=d.color;
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle="black";
+      ctx.font="bold 16px sans-serif";
       ctx.fillText(d.size+'"×'+d.depth+'"', d.x, d.y-5);
-      ctx.font="13px sans-serif"; ctx.fillText(label,d.x,d.y+15);
-    } else {
-      let r = (d.size + 2)*2;
-      ctx.beginPath(); ctx.arc(d.x,d.y,r,0,Math.PI*2);
-      ctx.fill(); ctx.stroke();
-      ctx.fillStyle="black"; ctx.font="bold 14px sans-serif";
+      ctx.font="13px sans-serif";
+      ctx.fillText("BD", d.x, d.y+15);
+    } else { // 丸ドラム＆シンバル
+      let r = (d.size+2)*2;
+      ctx.beginPath();
+      ctx.arc(d.x,d.y,r,0,Math.PI*2);
+      ctx.fillStyle=d.color;
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle="black";
+      ctx.font="bold 14px sans-serif";
       ctx.fillText(d.size+'"', d.x, d.y-5);
-      ctx.font="12px sans-serif"; ctx.fillText(label,d.x,d.y+12);
+      ctx.font="12px sans-serif";
+      ctx.fillText(["Snare","Tom","Floor Tom"].includes(d.type)?label:d.type,d.x,d.y+12);
     }
   });
   updateList();
@@ -156,18 +172,12 @@ function deleteItem(index){ items.splice(index,1); draw(); }
 // リセット
 document.getElementById("resetBtn").addEventListener("click", ()=>{ items=[]; draw(); });
 
-// マウス・タッチ座標
-function getPointerPos(e){
-  const rect = canvas.getBoundingClientRect();
-  if(e.touches){ return { x:e.touches[0].clientX-rect.left, y:e.touches[0].clientY-rect.top }; }
-  return { x:e.clientX-rect.left, y:e.clientY-rect.top };
-}
-
-// ドラッグ
+// ドラッグ対応
+function getPointerPos(e){ const rect=canvas.getBoundingClientRect(); return e.touches?{x:e.touches[0].clientX-rect.left,y:e.touches[0].clientY-rect.top}:{x:e.clientX-rect.left,y:e.clientY-rect.top}; }
 function startDrag(e){ e.preventDefault(); const pos=getPointerPos(e);
   for(let i=items.length-1;i>=0;i--){ const d=items[i]; let hit=false;
     if(d.type=="Kick"){ let w=d.size*1.5,h=d.depth*2; hit=(pos.x>d.x-w/2 && pos.x<d.x+w/2 && pos.y>d.y-h/2 && pos.y<d.y+h/2);}
-    else{ hit=(Math.hypot(pos.x-d.x,pos.y-d.y)<(d.size+2)*2); }
+    else hit=(Math.hypot(pos.x-d.x,pos.y-d.y)<(d.size+2)*2);
     if(hit){ dragItem=d; offsetX=pos.x-d.x; offsetY=pos.y-d.y; break; }
   }
 }
@@ -198,7 +208,7 @@ foldBtn.addEventListener("click",()=>{
   const isFolded = panel.classList.toggle("folded");
   panel.style.width = isFolded ? "40px" : "220px";
 
-  // 折りたたみ時は入力欄非表示
+  // 入力欄とラベルの表示切り替え
   const hide = isFolded;
   typeSelect.style.display = hide ? "none" : "block";
   sizeInput.style.display = hide ? "none" : "block";
@@ -207,6 +217,7 @@ foldBtn.addEventListener("click",()=>{
 
   resizeCanvas();
 });
+
 </script>
 </body>
 </html>
