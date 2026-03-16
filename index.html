@@ -91,7 +91,6 @@ function draw(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
   drawGrid();
   items.forEach(d=>{
-    let displaySize = d.size + 2; // +2インチ表示
     let label = d.type;
     if(d.type=="Kick") label = "BD";
     if(d.type=="Snare") label = "SD";
@@ -101,7 +100,7 @@ function draw(){
 
     if(d.type=="Kick"){
       // バスドラは縦2倍、横1.5倍
-      let w = (displaySize) * 1.5;
+      let w = (d.size) * 1.5;
       let h = (d.depth) * 2;
       ctx.beginPath(); 
       ctx.rect(d.x - w/2, d.y - h/2, w, h);
@@ -110,7 +109,7 @@ function draw(){
       ctx.fillText(d.size+'"×'+d.depth+'"', d.x, d.y-5);
       ctx.font="13px sans-serif"; ctx.fillText(label,d.x,d.y+15);
     } else {
-      let r = displaySize*2;
+      let r = (d.size + 2)*2; // 他の太鼓・シンバル +2インチ
       ctx.beginPath(); ctx.arc(d.x,d.y,r,0,Math.PI*2);
       ctx.fill(); ctx.stroke();
       ctx.fillStyle="black"; ctx.font="bold 14px sans-serif";
@@ -167,7 +166,7 @@ function getPointerPos(e){
 // ドラッグ
 function startDrag(e){ e.preventDefault(); const pos=getPointerPos(e);
   for(let i=items.length-1;i>=0;i--){ const d=items[i]; let hit=false;
-    if(d.type=="Kick"){ let w=(d.size+2)*1.5,h=d.depth*2; hit=(pos.x>d.x-w/2 && pos.x<d.x+w/2 && pos.y>d.y-h/2 && pos.y<d.y+h/2);}
+    if(d.type=="Kick"){ let w=d.size*1.5,h=d.depth*2; hit=(pos.x>d.x-w/2 && pos.x<d.x+w/2 && pos.y>d.y-h/2 && pos.y<d.y+h/2);}
     else{ hit=(Math.hypot(pos.x-d.x,pos.y-d.y)<(d.size+2)*2); }
     if(hit){ dragItem=d; offsetX=pos.x-d.x; offsetY=pos.y-d.y; break; }
   }
