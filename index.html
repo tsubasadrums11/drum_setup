@@ -12,7 +12,7 @@ body{margin:0;font-family:sans-serif;background:#eee;overflow:hidden;}
 #panel.folded{width:40px; padding:5px;}
 #canvas{position:absolute; top:0; background:#eee;}
 button{margin-top:5px;}
-input{width:60px;margin:3px 0;}
+input, select{min-width:30px;margin:3px 0;}
 label{font-size:13px;}
 #addBtn{
   position:absolute; right:20px; bottom:20px; width:70px; height:70px;
@@ -99,9 +99,9 @@ function draw(){
     ctx.lineWidth = 3; ctx.strokeStyle = "black"; ctx.fillStyle = d.color; ctx.textAlign="center";
 
     if(d.type=="Kick"){
-      // バスドラは縦2倍、横1.5倍
-      let w = (d.size) * 1.5;
-      let h = (d.depth) * 2;
+      // バスドラ専用サイズ
+      let w = d.size*1.5;
+      let h = d.depth*2;
       ctx.beginPath(); 
       ctx.rect(d.x - w/2, d.y - h/2, w, h);
       ctx.fill(); ctx.stroke();
@@ -109,7 +109,7 @@ function draw(){
       ctx.fillText(d.size+'"×'+d.depth+'"', d.x, d.y-5);
       ctx.font="13px sans-serif"; ctx.fillText(label,d.x,d.y+15);
     } else {
-      let r = (d.size + 2)*2; // 他の太鼓・シンバル +2インチ
+      let r = (d.size + 2)*2;
       ctx.beginPath(); ctx.arc(d.x,d.y,r,0,Math.PI*2);
       ctx.fill(); ctx.stroke();
       ctx.fillStyle="black"; ctx.font="bold 14px sans-serif";
@@ -197,6 +197,14 @@ const foldBtn=document.getElementById("foldBtn");
 foldBtn.addEventListener("click",()=>{
   const isFolded = panel.classList.toggle("folded");
   panel.style.width = isFolded ? "40px" : "220px";
+
+  // 折りたたみ時は入力欄非表示
+  const hide = isFolded;
+  typeSelect.style.display = hide ? "none" : "block";
+  sizeInput.style.display = hide ? "none" : "block";
+  depthInput.style.display = hide || typeSelect.value!=="Kick" ? "none" : "block";
+  depthLabel.style.display = hide || typeSelect.value!=="Kick" ? "none" : "block";
+
   resizeCanvas();
 });
 </script>
