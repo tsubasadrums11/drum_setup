@@ -1,9 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<link rel="apple-touch-icon" href="icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 
 <style>
@@ -70,7 +68,7 @@ font-size:20px;cursor:pointer;
 <div class="close" onclick="closeEdit()">×</div>
 <h3>編集</h3>
 
-サイズ:<input id="editSize" type="number"><br>
+インチ:<input id="editSize" type="number"><br>
 <div id="depthWrap">奥行:<input id="editDepth" type="number"><br></div>
 
 回転:<input id="rotateRange" type="range" min="0" max="360"><br>
@@ -87,12 +85,9 @@ font-size:20px;cursor:pointer;
 </div>
 
 <script>
-
-// ===== ズーム禁止 =====
 document.addEventListener('gesturestart', e => e.preventDefault())
 document.addEventListener('touchmove', e => e.preventDefault(), { passive:false })
 
-// ===== 基本 =====
 const canvas=document.getElementById("canvas")
 const ctx=canvas.getContext("2d")
 
@@ -107,7 +102,6 @@ let grid=true
 
 function snap(v){return Math.round(v/50)*50}
 
-// ===== 描画 =====
 function drawGrid(){
 if(!grid)return
 ctx.strokeStyle="#ccc"
@@ -128,6 +122,16 @@ ctx.save()
 ctx.translate(d.x,d.y)
 ctx.rotate((d.rot||0)*Math.PI/180)
 
+if(d===selected){
+ctx.beginPath()
+ctx.arc(0,0,d.size*2.8,0,Math.PI*2)
+ctx.fillStyle="rgba(0,150,255,0.15)"
+ctx.fill()
+ctx.strokeStyle="rgba(0,150,255,0.9)"
+ctx.lineWidth=3
+ctx.stroke()
+}
+
 let label=""
 if(d.type==="Kick") label="BD"
 if(d.type==="Snare") label="SD"
@@ -137,8 +141,10 @@ if(d.type==="Floor Tom") label="FT"
 if(d.type==="Kick"){
 let w=d.size*4
 let h=d.depth*3
+
 ctx.fillStyle="#fff"
 ctx.fillRect(-w/2,-h/2,w,h)
+
 ctx.strokeStyle="#000"
 ctx.lineWidth=2
 ctx.strokeRect(-w/2,-h/2,w,h)
@@ -146,14 +152,17 @@ ctx.strokeRect(-w/2,-h/2,w,h)
 ctx.textAlign="center"
 ctx.fillStyle="#000"
 ctx.fillText(label,0,-5)
-ctx.fillText(`${d.size}"`,0,15)
+ctx.fillText(d.size+'"',0,15)
 
 }else{
+
 let r=d.size*2
 ctx.beginPath()
 ctx.arc(0,0,r,0,Math.PI*2)
+
 ctx.fillStyle=(["Crash","Ride","HH","Splash","China"].includes(d.type))?"#FFD700":"#fff"
 ctx.fill()
+
 ctx.strokeStyle="#000"
 ctx.lineWidth=2
 ctx.stroke()
@@ -163,10 +172,10 @@ ctx.fillStyle="#000"
 
 if(label){
 ctx.fillText(label,0,-5)
-ctx.fillText(`${d.size}"`,0,15)
+ctx.fillText(d.size+'"',0,15)
 }else{
 ctx.fillText(d.type,0,-5)
-ctx.fillText(`${d.size}"`,0,15)
+ctx.fillText(d.size+'"',0,15)
 }
 }
 
@@ -174,7 +183,6 @@ ctx.restore()
 })
 }
 
-// ===== pointer操作 =====
 canvas.addEventListener("pointerdown",e=>{
 const rect=canvas.getBoundingClientRect()
 const x=e.clientX-rect.left
@@ -194,6 +202,7 @@ canvas.setPointerCapture(e.pointerId)
 break
 }
 }
+draw()
 })
 
 canvas.addEventListener("pointermove",e=>{
@@ -216,7 +225,6 @@ dragging=false
 canvas.releasePointerCapture(e.pointerId)
 })
 
-// ===== ＋ボタン =====
 addBtn.onclick=()=>{
 openModal()
 title.innerText="種類"
@@ -249,27 +257,40 @@ content.innerHTML=html
 }
 
 function step3(type){
-title.innerText="サイズ"
+title.innerText="インチ入力"
 content.innerHTML=`
-サイズ:<input id="size" type="number"><br>
+インチ:<input id="size" type="number"><br>
 ${type==="Kick"?'奥行:<input id="depth"><br>':''}
 <button onclick="create('${type}')">追加</button>
 `
 }
 
 function create(type){
-let size=parseInt(size.value)
-if(!size)return
+const sizeInput=document.getElementById("size")
+if(!sizeInput)return
 
-let depth=18
-if(type==="Kick") depth=parseInt(document.getElementById("depth").value)||18
+let sizeVal=parseInt(sizeInput.value)
+if(!sizeVal)return
 
-items.push({x:snap(200),y:snap(200),type,size,depth,rot:0})
+let depthVal=18
+if(type==="Kick"){
+const depthInput=document.getElementById("depth")
+depthVal=depthInput?parseInt(depthInput.value)||18:18
+}
+
+items.push({
+x:snap(200),
+y:snap(200),
+type:type,
+size:sizeVal,
+depth:depthVal,
+rot:0
+})
+
 closeModal()
 draw()
 }
 
-// ===== 編集 =====
 function openEdit(d){
 selected=d
 editModal.style.display="block"
@@ -300,13 +321,11 @@ closeEdit()
 draw()
 }
 
-// ===== レイヤー =====
 function bringFront(){items=items.filter(i=>i!==selected);items.push(selected);draw()}
 function sendBack(){items=items.filter(i=>i!==selected);items.unshift(selected);draw()}
 function forward(){let i=items.indexOf(selected);if(i<items.length-1){[items[i],items[i+1]]=[items[i+1],items[i]]}draw()}
 function backward(){let i=items.indexOf(selected);if(i>0){[items[i],items[i-1]]=[items[i-1],items[i]]}draw()}
 
-// ===== その他 =====
 function toggleGrid(){grid=!grid;draw()}
 function save(){localStorage.setItem("drum",JSON.stringify(items))}
 function load(){let d=localStorage.getItem("drum");if(d){items=JSON.parse(d);draw()}}
@@ -322,7 +341,6 @@ function closeModal(){modal.style.display="none";overlay.style.display="none"}
 function closeEdit(){editModal.style.display="none";overlay.style.display="none"}
 
 draw()
-
 </script>
 
 </body>
