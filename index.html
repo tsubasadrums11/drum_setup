@@ -3,15 +3,76 @@
 <head>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <style>
-html,body{margin:0;overflow:hidden;background:#eee;font-family:sans-serif;touch-action:none;}
-#topbar{position:absolute;top:0;width:100%;height:50px;background:#222;color:#fff;display:flex;gap:10px;align-items:center;padding:0 10px;z-index:10;}
-#canvas{position:absolute;top:50px;left:0;}
-#addBtn{position:absolute;right:20px;bottom:20px;width:60px;height:60px;border-radius:50%;background:#ffd400;font-size:30px;border:none;z-index:10;}
-#overlay{position:absolute;width:100%;height:100%;background:rgba(0,0,0,0.4);display:none;z-index:15;}
-.modal{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;padding:20px;border-radius:10px;display:none;width:260px;z-index:20;}
-.close{position:absolute;right:10px;top:5px;cursor:pointer;}
-input{width:100%;box-sizing:border-box;}
-button{margin-top:5px;}
+html,body{
+margin:0;
+overflow:hidden;
+background:#eee;
+font-family:sans-serif;
+touch-action:none;
+}
+#topbar{
+position:absolute;
+top:0;
+width:100%;
+height:50px;
+background:#222;
+color:#fff;
+display:flex;
+gap:10px;
+align-items:center;
+padding:0 10px;
+z-index:10;
+}
+#canvas{
+position:absolute;
+top:50px;
+left:0;
+}
+#addBtn{
+position:absolute;
+right:20px;
+bottom:20px;
+width:60px;
+height:60px;
+border-radius:50%;
+background:#ffd400;
+font-size:30px;
+border:none;
+z-index:10;
+}
+#overlay{
+position:absolute;
+width:100%;
+height:100%;
+background:rgba(0,0,0,0.4);
+display:none;
+z-index:15;
+}
+.modal{
+position:absolute;
+top:50%;
+left:50%;
+transform:translate(-50%,-50%);
+background:#fff;
+padding:20px;
+border-radius:10px;
+display:none;
+width:260px;
+z-index:20;
+}
+.close{
+position:absolute;
+right:10px;
+top:5px;
+cursor:pointer;
+}
+input{
+width:100%;
+box-sizing:border-box;
+}
+button{
+margin-top:5px;
+}
 </style>
 </head>
 
@@ -38,58 +99,87 @@ button{margin-top:5px;}
 <div id="editModal" class="modal">
 <div class="close" onclick="closeEdit()">×</div>
 <h3>編集</h3>
-口径(インチ)<input id="editSize" type="number"><br>
-<div id="depthWrap">深さ(インチ)<input id="editDepth" type="number"><br></div>
-回転<input type="range" id="rotateRange" min="0" max="360"><br>
-角度<input id="rotateInput" type="number"><br>
+
+<label>口径(インチ)</label>
+<input id="editSize" type="number">
+
+<div id="depthWrap">
+<label>深さ(インチ)</label>
+<input id="editDepth" type="number">
+</div>
+
+<label>回転</label>
+<input type="range" id="rotateRange" min="0" max="360">
+
+<label>角度</label>
+<input id="rotateInput" type="number">
 
 <button onclick="applyEdit()">更新</button>
 <button onclick="deleteItem()">削除</button>
 
 <hr>
+
 <button onclick="bringFront()">最前面</button>
 <button onclick="sendBack()">最背面</button>
 <button onclick="forward()">一つ前</button>
 <button onclick="backward()">一つ後ろ</button>
+
 </div>
 
 <script>
-const canvas=document.getElementById("canvas")
-const ctx=canvas.getContext("2d")
-canvas.width=innerWidth
-canvas.height=innerHeight-50
 
-let items=[]
-let selected=null
-let dragging=false
-let offsetX=0,offsetY=0
-let gridVisible=true
+const SCALE = 1.5
 
-let moved=false
-let pressTimer=null
-let pressTime=500
+const canvas = document.getElementById("canvas")
+const ctx = canvas.getContext("2d")
+
+canvas.width = innerWidth
+canvas.height = innerHeight - 50
+
+let items = []
+let selected = null
+let dragging = false
+let offsetX = 0
+let offsetY = 0
+let gridVisible = true
+
+let moved = false
+let pressTimer = null
+let pressTime = 500
 
 function draw(){
+
 ctx.clearRect(0,0,canvas.width,canvas.height)
 
+// グリッド
 if(gridVisible){
 ctx.strokeStyle="#ccc"
 for(let x=0;x<=canvas.width;x+=50){
-ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,canvas.height);ctx.stroke()
+ctx.beginPath()
+ctx.moveTo(x,0)
+ctx.lineTo(x,canvas.height)
+ctx.stroke()
 }
 for(let y=0;y<=canvas.height;y+=50){
-ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(canvas.width,y);ctx.stroke()
+ctx.beginPath()
+ctx.moveTo(0,y)
+ctx.lineTo(canvas.width,y)
+ctx.stroke()
 }
 }
 
+// 図形
 items.forEach(d=>{
+
 ctx.save()
+
 ctx.translate(d.x,d.y)
 ctx.rotate((d.rot||0)*Math.PI/180)
 
+// ハイライト
 if(d===selected){
 ctx.beginPath()
-ctx.arc(0,0,d.size*2.8,0,Math.PI*2)
+ctx.arc(0,0,d.size*2.8*SCALE,0,Math.PI*2)
 ctx.fillStyle="rgba(0,150,255,0.2)"
 ctx.fill()
 }
@@ -97,55 +187,85 @@ ctx.fill()
 ctx.strokeStyle="#000"
 ctx.lineWidth=2
 
-let label={Kick:"BD",Snare:"SD",Tom:"TT","Floor Tom":"FT"}[d.type]||d.type
+let label = {
+Kick:"BD",
+Snare:"SD",
+Tom:"TT",
+"Floor Tom":"FT"
+}[d.type] || d.type
 
 ctx.textAlign="center"
 ctx.textBaseline="middle"
 
+// バスドラ
 if(d.type==="Kick"){
-let w=d.size*4
-let h=d.depth*3*1.5
+let w = d.size*4*SCALE
+let h = d.depth*3*1.5*SCALE
+
 ctx.fillStyle="#fff"
 ctx.fillRect(-w/2,-h/2,w,h)
 ctx.strokeRect(-w/2,-h/2,w,h)
+
 ctx.fillStyle="#000"
 ctx.fillText(label,0,-10)
 ctx.fillText(d.size+'"',0,10)
+
 }else{
-let r=d.size*2
+
+// 円系
+let r = d.size*2*SCALE
+
 ctx.beginPath()
 ctx.arc(0,0,r,0,Math.PI*2)
-ctx.fillStyle=(["Crash","Ride","HH","Splash","China"].includes(d.type))?"#FFD700":"#fff"
+
+if(["Crash","Ride","HH","Splash","China"].includes(d.type)){
+ctx.fillStyle="#FFD700"
+}else{
+ctx.fillStyle="#fff"
+}
+
 ctx.fill()
 ctx.stroke()
+
 ctx.fillStyle="#000"
 ctx.fillText(label,0,-10)
 ctx.fillText(d.size+'"',0,10)
+
 }
 
 ctx.restore()
+
 })
+
 }
 
+// グリッド切替
 function toggleGrid(){
-gridVisible=!gridVisible
+gridVisible = !gridVisible
 draw()
 }
 
-canvas.onpointerdown=e=>{
-let x=e.offsetX,y=e.offsetY
-selected=null
-moved=false
+// タッチ開始
+canvas.onpointerdown = e => {
+
+let x = e.offsetX
+let y = e.offsetY
+
+selected = null
+moved = false
 
 for(let i=items.length-1;i>=0;i--){
-let d=items[i]
-if(Math.hypot(d.x-x,d.y-y)<d.size*2.5){
-selected=d
-dragging=true
-offsetX=x-d.x
-offsetY=y-d.y
+let d = items[i]
 
-pressTimer=setTimeout(()=>{
+if(Math.hypot(d.x-x,d.y-y) < d.size*2.5*SCALE){
+
+selected = d
+dragging = true
+
+offsetX = x - d.x
+offsetY = y - d.y
+
+pressTimer = setTimeout(()=>{
 if(!moved && selected){
 openEdit(selected)
 }
@@ -154,121 +274,202 @@ openEdit(selected)
 break
 }
 }
+
 draw()
 }
 
-canvas.onpointermove=e=>{
-if(!selected||!dragging)return
+// 移動
+canvas.onpointermove = e => {
 
-let x=e.offsetX,y=e.offsetY
+if(!selected || !dragging) return
+
+let x = e.offsetX
+let y = e.offsetY
 
 if(Math.abs(x-selected.x)>2 || Math.abs(y-selected.y)>2){
-moved=true
+moved = true
 clearTimeout(pressTimer)
 }
 
-selected.x=x-offsetX
-selected.y=y-offsetY
+selected.x = x - offsetX
+selected.y = y - offsetY
+
 draw()
+
 }
 
-canvas.onpointerup=()=>{
-dragging=false
+// 離す
+canvas.onpointerup = ()=>{
+dragging = false
 clearTimeout(pressTimer)
 }
 
-// 編集
+// 編集開く
 function openEdit(d){
+
 editModal.style.display="block"
 overlay.style.display="block"
 
-editSize.value=d.size
-rotateRange.value=d.rot||0
-rotateInput.value=d.rot||0
+editSize.value = d.size
+rotateRange.value = d.rot || 0
+rotateInput.value = d.rot || 0
 
 if(d.type==="Kick"){
 depthWrap.style.display="block"
-editDepth.value=d.depth
+editDepth.value = d.depth
 }else{
 depthWrap.style.display="none"
 }
+
 }
 
+// 編集反映
 function applyEdit(){
-selected.size=parseInt(editSize.value)
+
+selected.size = parseInt(editSize.value)
+
 if(selected.type==="Kick"){
-selected.depth=parseInt(editDepth.value)
-}
-draw()
-closeEdit()
+selected.depth = parseInt(editDepth.value)
 }
 
-function deleteItem(){
-items=items.filter(i=>i!==selected)
-selected=null
 draw()
 closeEdit()
+
+}
+
+// 削除
+function deleteItem(){
+
+items = items.filter(i=>i!==selected)
+selected = null
+
+draw()
+closeEdit()
+
 }
 
 // レイヤー
-function bringFront(){items=items.filter(i=>i!==selected);items.push(selected);draw()}
-function sendBack(){items=items.filter(i=>i!==selected);items.unshift(selected);draw()}
-function forward(){let i=items.indexOf(selected);if(i<items.length-1){[items[i],items[i+1]]=[items[i+1],items[i]]}draw()}
-function backward(){let i=items.indexOf(selected);if(i>0){[items[i],items[i-1]]=[items[i-1],items[i]]}draw()}
+function bringFront(){
+items = items.filter(i=>i!==selected)
+items.push(selected)
+draw()
+}
+
+function sendBack(){
+items = items.filter(i=>i!==selected)
+items.unshift(selected)
+draw()
+}
+
+function forward(){
+let i = items.indexOf(selected)
+if(i < items.length-1){
+let temp = items[i]
+items[i] = items[i+1]
+items[i+1] = temp
+}
+draw()
+}
+
+function backward(){
+let i = items.indexOf(selected)
+if(i > 0){
+let temp = items[i]
+items[i] = items[i-1]
+items[i-1] = temp
+}
+draw()
+}
 
 // 回転
-rotateRange.oninput=()=>{if(selected){selected.rot=parseInt(rotateRange.value);rotateInput.value=rotateRange.value;draw()}}
-rotateInput.oninput=()=>{if(selected){selected.rot=parseInt(rotateInput.value);rotateRange.value=rotateInput.value;draw()}}
+rotateRange.oninput = ()=>{
+if(selected){
+selected.rot = parseInt(rotateRange.value)
+rotateInput.value = rotateRange.value
+draw()
+}
+}
 
-// 追加UI
-addBtn.onclick=()=>{
+rotateInput.oninput = ()=>{
+if(selected){
+selected.rot = parseInt(rotateInput.value)
+rotateRange.value = rotateInput.value
+draw()
+}
+}
+
+// 追加ボタン
+addBtn.onclick = ()=>{
 modal.style.display="block"
 overlay.style.display="block"
 modalTitle.innerText="追加"
 
-modalContent.innerHTML=`
+modalContent.innerHTML = `
 <button onclick="selectType('drum')">太鼓</button>
 <button onclick="selectType('cymbal')">シンバル</button>
 `
 }
 
+// 種類選択
 function selectType(type){
+
 if(type==="drum"){
-modalContent.innerHTML=`
+
+modalContent.innerHTML = `
 <button onclick="createDrum('Kick')">バスドラ</button>
 <button onclick="createDrum('Snare')">スネア</button>
 <button onclick="createDrum('Tom')">タム</button>
 <button onclick="createDrum('Floor Tom')">フロアタム</button>
 `
+
 }else{
-modalContent.innerHTML=`
+
+modalContent.innerHTML = `
 <button onclick="createCymbal('Crash')">Crash</button>
 <button onclick="createCymbal('Ride')">Ride</button>
 <button onclick="createCymbal('HH')">HH</button>
 <button onclick="createCymbal('Splash')">Splash</button>
 <button onclick="createCymbal('China')">China</button>
 `
-}
+
 }
 
+}
+
+// 太鼓入力
 function createDrum(type){
-modalContent.innerHTML=`
-口径(インチ)<input id="size"><br>
-${type==="Kick"?'深さ(インチ)<input id="depth"><br>':''}
+
+modalContent.innerHTML = `
+<label>口径(インチ)</label>
+<input id="size">
+
+${type==="Kick" ? `
+<label>深さ(インチ)</label>
+<input id="depth">
+` : ``}
+
 <button onclick="addItem('${type}')">追加</button>
 `
+
 }
 
+// シンバル入力
 function createCymbal(type){
-modalContent.innerHTML=`
-口径(インチ)<input id="size"><br>
+
+modalContent.innerHTML = `
+<label>口径(インチ)</label>
+<input id="size">
+
 <button onclick="addItem('${type}')">追加</button>
 `
+
 }
 
+// 追加処理
 function addItem(type){
-let size=parseInt(document.getElementById("size").value)
-let depth=document.getElementById("depth")?parseInt(document.getElementById("depth").value):0
+
+let size = parseInt(document.getElementById("size").value)
+let depth = document.getElementById("depth") ? parseInt(document.getElementById("depth").value) : 0
 
 items.push({
 type:type,
@@ -281,23 +482,40 @@ rot:0
 
 draw()
 closeModal()
+
 }
 
-// modal
-function closeModal(){modal.style.display="none";overlay.style.display="none"}
-function closeEdit(){editModal.style.display="none";overlay.style.display="none"}
+// モーダル
+function closeModal(){
+modal.style.display="none"
+overlay.style.display="none"
+}
+
+function closeEdit(){
+editModal.style.display="none"
+overlay.style.display="none"
+}
 
 // 保存
-function save(){localStorage.setItem("drum",JSON.stringify(items))}
-function load(){items=JSON.parse(localStorage.getItem("drum")||"[]");draw()}
+function save(){
+localStorage.setItem("drum",JSON.stringify(items))
+}
+
+function load(){
+items = JSON.parse(localStorage.getItem("drum") || "[]")
+draw()
+}
+
+// PNG
 function exportPNG(){
-let a=document.createElement("a")
-a.href=canvas.toDataURL()
-a.download="drum.png"
+let a = document.createElement("a")
+a.href = canvas.toDataURL()
+a.download = "drum.png"
 a.click()
 }
 
 draw()
+
 </script>
 
 </body>
