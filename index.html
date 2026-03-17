@@ -10,7 +10,8 @@ html,body{margin:0;overflow:hidden;background:#eee;font-family:sans-serif;touch-
 #overlay{position:absolute;width:100%;height:100%;background:rgba(0,0,0,0.4);display:none;z-index:15;}
 .modal{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;padding:20px;border-radius:10px;display:none;width:260px;z-index:20;}
 .close{position:absolute;right:10px;top:5px;cursor:pointer;}
-input,button{margin:5px 0;}
+input{width:100%;box-sizing:border-box;}
+button{margin-top:5px;}
 </style>
 </head>
 
@@ -66,13 +67,13 @@ let offsetX=0,offsetY=0
 function draw(){
 ctx.clearRect(0,0,canvas.width,canvas.height)
 
-// grid
+// grid（ズレ修正）
 ctx.strokeStyle="#ccc"
-for(let x=0;x<canvas.width;x+=50){
-ctx.beginPath();ctx.moveTo(x+0.5,0);ctx.lineTo(x+0.5,canvas.height);ctx.stroke()
+for(let x=0;x<=canvas.width;x+=50){
+ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,canvas.height);ctx.stroke()
 }
-for(let y=0;y<canvas.height;y+=50){
-ctx.beginPath();ctx.moveTo(0,y+0.5);ctx.lineTo(canvas.width,y+0.5);ctx.stroke()
+for(let y=0;y<=canvas.height;y+=50){
+ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(canvas.width,y);ctx.stroke()
 }
 
 // items
@@ -89,23 +90,29 @@ ctx.fillStyle="rgba(0,150,255,0.2)"
 ctx.fill()
 }
 
+ctx.strokeStyle="#000"
+ctx.lineWidth=2
+
 let label={Kick:"BD",Snare:"SD",Tom:"TT","Floor Tom":"FT"}[d.type]||d.type
+
+ctx.textAlign="center"
+ctx.textBaseline="middle"
 
 if(d.type==="Kick"){
 let w=d.size*4
 let h=d.depth*3*1.5
+
 ctx.fillStyle="#fff"
 ctx.fillRect(-w/2,-h/2,w,h)
-ctx.strokeStyle="#000"
 ctx.strokeRect(-w/2,-h/2,w,h)
 
 ctx.fillStyle="#000"
-ctx.textAlign="center"
-ctx.fillText(label,0,-5)
-ctx.fillText(d.size+'"',0,15)
+ctx.fillText(label,0,-10)
+ctx.fillText(d.size+'"',0,10)
 
 }else{
 let r=d.size*2
+
 ctx.beginPath()
 ctx.arc(0,0,r,0,Math.PI*2)
 ctx.fillStyle=(["Crash","Ride","HH","Splash","China"].includes(d.type))?"#FFD700":"#fff"
@@ -113,8 +120,8 @@ ctx.fill()
 ctx.stroke()
 
 ctx.fillStyle="#000"
-ctx.fillText(label,0,-5)
-ctx.fillText(d.size+'"',0,15)
+ctx.fillText(label,0,-10)
+ctx.fillText(d.size+'"',0,10)
 }
 
 ctx.restore()
@@ -193,7 +200,7 @@ function sendBack(){items=items.filter(i=>i!==selected);items.unshift(selected);
 function forward(){let i=items.indexOf(selected);if(i<items.length-1){[items[i],items[i+1]]=[items[i+1],items[i]]}draw()}
 function backward(){let i=items.indexOf(selected);if(i>0){[items[i],items[i-1]]=[items[i-1],items[i]]}draw()}
 
-// 回転（UIのみ）
+// 回転
 rotateRange.oninput=()=>{
 if(selected){
 selected.rot=parseInt(rotateRange.value)
@@ -201,7 +208,6 @@ rotateInput.value=rotateRange.value
 draw()
 }
 }
-
 rotateInput.oninput=()=>{
 if(selected){
 selected.rot=parseInt(rotateInput.value)
