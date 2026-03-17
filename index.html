@@ -63,12 +63,15 @@ let items=[]
 let selected=null
 let dragging=false
 let offsetX=0,offsetY=0
-let gridVisible=true // ←追加
+let gridVisible=true
+
+let moved=false
+let pressTimer=null
+let pressTime=500
 
 function draw(){
 ctx.clearRect(0,0,canvas.width,canvas.height)
 
-// grid（ON/OFF）
 if(gridVisible){
 ctx.strokeStyle="#ccc"
 for(let x=0;x<=canvas.width;x+=50){
@@ -79,13 +82,11 @@ ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(canvas.width,y);ctx.stroke()
 }
 }
 
-// items
 items.forEach(d=>{
 ctx.save()
 ctx.translate(d.x,d.y)
 ctx.rotate((d.rot||0)*Math.PI/180)
 
-// ハイライト
 if(d===selected){
 ctx.beginPath()
 ctx.arc(0,0,d.size*2.8,0,Math.PI*2)
@@ -126,16 +127,15 @@ ctx.restore()
 })
 }
 
-// グリッド切替
 function toggleGrid(){
 gridVisible=!gridVisible
 draw()
 }
 
-// 移動
 canvas.onpointerdown=e=>{
 let x=e.offsetX,y=e.offsetY
 selected=null
+moved=false
 
 for(let i=items.length-1;i>=0;i--){
 let d=items[i]
@@ -144,6 +144,13 @@ selected=d
 dragging=true
 offsetX=x-d.x
 offsetY=y-d.y
+
+pressTimer=setTimeout(()=>{
+if(!moved && selected){
+openEdit(selected)
+}
+},pressTime)
+
 break
 }
 }
@@ -152,17 +159,22 @@ draw()
 
 canvas.onpointermove=e=>{
 if(!selected||!dragging)return
+
 let x=e.offsetX,y=e.offsetY
+
+if(Math.abs(x-selected.x)>2 || Math.abs(y-selected.y)>2){
+moved=true
+clearTimeout(pressTimer)
+}
+
 selected.x=x-offsetX
 selected.y=y-offsetY
 draw()
 }
 
-canvas.onpointerup=()=>{dragging=false}
-
-// タップ編集
-canvas.onclick=()=>{
-if(selected) openEdit(selected)
+canvas.onpointerup=()=>{
+dragging=false
+clearTimeout(pressTimer)
 }
 
 // 編集
@@ -198,7 +210,7 @@ draw()
 closeEdit()
 }
 
-// layer
+// レイヤー
 function bringFront(){items=items.filter(i=>i!==selected);items.push(selected);draw()}
 function sendBack(){items=items.filter(i=>i!==selected);items.unshift(selected);draw()}
 function forward(){let i=items.indexOf(selected);if(i<items.length-1){[items[i],items[i+1]]=[items[i+1],items[i]]}draw()}
@@ -275,7 +287,7 @@ closeModal()
 function closeModal(){modal.style.display="none";overlay.style.display="none"}
 function closeEdit(){editModal.style.display="none";overlay.style.display="none"}
 
-// save
+// 保存
 function save(){localStorage.setItem("drum",JSON.stringify(items))}
 function load(){items=JSON.parse(localStorage.getItem("drum")||"[]");draw()}
 function exportPNG(){
