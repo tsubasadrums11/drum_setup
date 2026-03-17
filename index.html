@@ -2,6 +2,11 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+
+<!-- ✅ PWA追加 -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#222">
+
 <style>
 html,body{
 margin:0;
@@ -152,7 +157,6 @@ function draw(){
 
 ctx.clearRect(0,0,canvas.width,canvas.height)
 
-// グリッド
 if(gridVisible){
 ctx.strokeStyle="#ccc"
 for(let x=0;x<=canvas.width;x+=50){
@@ -169,7 +173,6 @@ ctx.stroke()
 }
 }
 
-// 図形
 items.forEach(d=>{
 
 ctx.save()
@@ -178,7 +181,6 @@ ctx.rotate((d.rot||0)*Math.PI/180)
 
 let scale = (d.type==="Kick") ? KICK_SCALE : SCALE
 
-// ハイライト
 if(d===selected){
 ctx.beginPath()
 ctx.arc(0,0,d.size*2.8*scale,0,Math.PI*2)
@@ -199,7 +201,6 @@ Tom:"TT",
 ctx.textAlign="center"
 ctx.textBaseline="middle"
 
-// バスドラ
 if(d.type==="Kick"){
 let w = d.size*4*scale
 let h = d.depth*3*1.5*scale
@@ -240,13 +241,11 @@ ctx.restore()
 
 }
 
-// グリッド切替
 function toggleGrid(){
 gridVisible = !gridVisible
 draw()
 }
 
-// タッチ開始
 canvas.onpointerdown = e => {
 
 let x = e.offsetX
@@ -257,7 +256,6 @@ moved = false
 
 for(let i=items.length-1;i>=0;i--){
 let d = items[i]
-
 let scale = (d.type==="Kick") ? KICK_SCALE : SCALE
 
 if(Math.hypot(d.x-x,d.y-y) < d.size*2.5*scale){
@@ -281,7 +279,6 @@ break
 draw()
 }
 
-// 移動
 canvas.onpointermove = e => {
 
 if(!selected || !dragging) return
@@ -301,13 +298,11 @@ draw()
 
 }
 
-// 離す
 canvas.onpointerup = ()=>{
 dragging = false
 clearTimeout(pressTimer)
 }
 
-// 編集
 function openEdit(d){
 
 editModal.style.display="block"
@@ -327,16 +322,12 @@ depthWrap.style.display="none"
 }
 
 function applyEdit(){
-
 selected.size = parseInt(editSize.value)
-
 if(selected.type==="Kick"){
 selected.depth = parseInt(editDepth.value)
 }
-
 draw()
 closeEdit()
-
 }
 
 function deleteItem(){
@@ -346,17 +337,14 @@ draw()
 closeEdit()
 }
 
-// レイヤー
 function bringFront(){items = items.filter(i=>i!==selected);items.push(selected);draw()}
 function sendBack(){items = items.filter(i=>i!==selected);items.unshift(selected);draw()}
 function forward(){let i=items.indexOf(selected);if(i<items.length-1){[items[i],items[i+1]]=[items[i+1],items[i]]}draw()}
 function backward(){let i=items.indexOf(selected);if(i>0){[items[i],items[i-1]]=[items[i-1],items[i]]}draw()}
 
-// 回転
 rotateRange.oninput=()=>{if(selected){selected.rot=parseInt(rotateRange.value);rotateInput.value=rotateRange.value;draw()}}
 rotateInput.oninput=()=>{if(selected){selected.rot=parseInt(rotateInput.value);rotateRange.value=rotateInput.value;draw()}}
 
-// 追加UI
 addBtn.onclick=()=>{
 modal.style.display="block"
 overlay.style.display="block"
@@ -437,6 +425,11 @@ a.click()
 }
 
 draw()
+
+// ✅ PWA Service Worker 登録
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("service-worker.js")
+}
 
 </script>
 
