@@ -60,7 +60,7 @@ canvas.height=innerHeight-50
 
 let items=[]
 let selected=null
-let dragging=false,rotating=false
+let dragging=false
 let offsetX=0,offsetY=0
 
 function draw(){
@@ -81,18 +81,13 @@ ctx.save()
 ctx.translate(d.x,d.y)
 ctx.rotate((d.rot||0)*Math.PI/180)
 
+// ハイライト
 if(d===selected){
 ctx.beginPath()
 ctx.arc(0,0,d.size*2.8,0,Math.PI*2)
 ctx.fillStyle="rgba(0,150,255,0.2)"
 ctx.fill()
 }
-
-// rotate handle
-ctx.beginPath()
-ctx.arc(0,-d.size*3,8,0,Math.PI*2)
-ctx.fillStyle="red"
-ctx.fill()
 
 let label={Kick:"BD",Snare:"SD",Tom:"TT","Floor Tom":"FT"}[d.type]||d.type
 
@@ -101,11 +96,14 @@ let w=d.size*4
 let h=d.depth*3*1.5
 ctx.fillStyle="#fff"
 ctx.fillRect(-w/2,-h/2,w,h)
+ctx.strokeStyle="#000"
 ctx.strokeRect(-w/2,-h/2,w,h)
+
 ctx.fillStyle="#000"
 ctx.textAlign="center"
 ctx.fillText(label,0,-5)
 ctx.fillText(d.size+'"',0,15)
+
 }else{
 let r=d.size*2
 ctx.beginPath()
@@ -113,6 +111,7 @@ ctx.arc(0,0,r,0,Math.PI*2)
 ctx.fillStyle=(["Crash","Ride","HH","Splash","China"].includes(d.type))?"#FFD700":"#fff"
 ctx.fill()
 ctx.stroke()
+
 ctx.fillStyle="#000"
 ctx.fillText(label,0,-5)
 ctx.fillText(d.size+'"',0,15)
@@ -122,60 +121,37 @@ ctx.restore()
 })
 }
 
-// pointer操作
+// 移動
 canvas.onpointerdown=e=>{
 let x=e.offsetX,y=e.offsetY
 selected=null
-rotating=false
 
 for(let i=items.length-1;i>=0;i--){
 let d=items[i]
-
-// rotate handle
-if(Math.hypot(d.x-x,d.y-y-d.size*3)<12){
-selected=d
-rotating=true
-return
-}
-
-// drag
 if(Math.hypot(d.x-x,d.y-y)<d.size*2.5){
 selected=d
 dragging=true
 offsetX=x-d.x
 offsetY=y-d.y
-return
+break
 }
 }
 draw()
 }
 
 canvas.onpointermove=e=>{
-if(!selected)return
+if(!selected||!dragging)return
 let x=e.offsetX,y=e.offsetY
-
-if(rotating){
-let angle=Math.atan2(y-selected.y,x-selected.x)*180/Math.PI
-selected.rot=angle
-rotateRange.value=angle
-rotateInput.value=Math.round(angle)
-}
-
-if(dragging){
 selected.x=x-offsetX
 selected.y=y-offsetY
-}
-
 draw()
 }
 
-canvas.onpointerup=()=>{dragging=false;rotating=false}
+canvas.onpointerup=()=>{dragging=false}
 
-// tapで編集
+// タップ編集
 canvas.onclick=()=>{
-if(selected){
-openEdit(selected)
-}
+if(selected) openEdit(selected)
 }
 
 // 編集
@@ -217,9 +193,22 @@ function sendBack(){items=items.filter(i=>i!==selected);items.unshift(selected);
 function forward(){let i=items.indexOf(selected);if(i<items.length-1){[items[i],items[i+1]]=[items[i+1],items[i]]}draw()}
 function backward(){let i=items.indexOf(selected);if(i>0){[items[i],items[i-1]]=[items[i-1],items[i]]}draw()}
 
-// 回転同期
-rotateRange.oninput=()=>{selected.rot=parseInt(rotateRange.value);rotateInput.value=rotateRange.value;draw()}
-rotateInput.oninput=()=>{selected.rot=parseInt(rotateInput.value);rotateRange.value=rotateInput.value;draw()}
+// 回転（UIのみ）
+rotateRange.oninput=()=>{
+if(selected){
+selected.rot=parseInt(rotateRange.value)
+rotateInput.value=rotateRange.value
+draw()
+}
+}
+
+rotateInput.oninput=()=>{
+if(selected){
+selected.rot=parseInt(rotateInput.value)
+rotateRange.value=rotateInput.value
+draw()
+}
+}
 
 // 追加UI
 addBtn.onclick=()=>{
@@ -288,7 +277,7 @@ closeModal()
 function closeModal(){modal.style.display="none";overlay.style.display="none"}
 function closeEdit(){editModal.style.display="none";overlay.style.display="none"}
 
-// save系
+// save
 function save(){localStorage.setItem("drum",JSON.stringify(items))}
 function load(){items=JSON.parse(localStorage.getItem("drum")||"[]");draw()}
 function exportPNG(){
@@ -300,5 +289,6 @@ a.click()
 
 draw()
 </script>
+
 </body>
 </html>
