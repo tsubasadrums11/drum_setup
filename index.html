@@ -72,6 +72,7 @@ font-size:20px;cursor:pointer;
 <div id="depthWrap">深さ(インチ):<input id="editDepth" type="number"><br></div>
 
 回転:<input id="rotateRange" type="range" min="0" max="360"><br>
+角度:<input id="rotateInput" type="number"><br>
 
 <button onclick="applyEdit()">更新</button>
 <button onclick="deleteItem()">削除</button>
@@ -97,17 +98,16 @@ canvas.height=window.innerHeight-50
 let items=[]
 let selected=null
 let dragging=false
+let rotating=false
 let offsetX=0,offsetY=0
-let grid=true
 
 function drawGrid(){
-if(!grid)return
 ctx.strokeStyle="#ccc"
-for(let x=0;x<canvas.width;x+=50){
-ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,canvas.height);ctx.stroke()
+for(let x=0;x<=canvas.width;x+=50){
+ctx.beginPath();ctx.moveTo(x+0.5,0);ctx.lineTo(x+0.5,canvas.height);ctx.stroke()
 }
-for(let y=0;y<canvas.height;y+=50){
-ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(canvas.width,y);ctx.stroke()
+for(let y=0;y<=canvas.height;y+=50){
+ctx.beginPath();ctx.moveTo(0,y+0.5);ctx.lineTo(canvas.width,y+0.5);ctx.stroke()
 }
 }
 
@@ -128,6 +128,12 @@ ctx.fill()
 ctx.strokeStyle="rgba(0,150,255,0.9)"
 ctx.lineWidth=3
 ctx.stroke()
+
+// 回転ハンドル
+ctx.beginPath()
+ctx.arc(0,-d.size*3,10,0,Math.PI*2)
+ctx.fillStyle="red"
+ctx.fill()
 }
 
 let label=""
@@ -138,61 +144,60 @@ if(d.type==="Floor Tom") label="FT"
 
 if(d.type==="Kick"){
 let w=d.size*4
-let h=d.depth*3*1.5  // ←縦1.5倍
+let h=d.depth*3*1.5
 
 ctx.fillStyle="#fff"
 ctx.fillRect(-w/2,-h/2,w,h)
-
 ctx.strokeStyle="#000"
 ctx.lineWidth=2
 ctx.strokeRect(-w/2,-h/2,w,h)
 
-ctx.textAlign="center"
 ctx.fillStyle="#000"
+ctx.textAlign="center"
 ctx.fillText(label,0,-5)
 ctx.fillText(d.size+'"',0,15)
 
 }else{
-
 let r=d.size*2
 ctx.beginPath()
 ctx.arc(0,0,r,0,Math.PI*2)
-
 ctx.fillStyle=(["Crash","Ride","HH","Splash","China"].includes(d.type))?"#FFD700":"#fff"
 ctx.fill()
-
 ctx.strokeStyle="#000"
-ctx.lineWidth=2
 ctx.stroke()
 
-ctx.textAlign="center"
 ctx.fillStyle="#000"
-
-if(label){
-ctx.fillText(label,0,-5)
+ctx.textAlign="center"
+ctx.fillText(label||d.type,0,-5)
 ctx.fillText(d.size+'"',0,15)
-}else{
-ctx.fillText(d.type,0,-5)
-ctx.fillText(d.size+'"',0,15)
-}
 }
 
 ctx.restore()
 })
 }
 
-// ===== 自由移動 =====
 canvas.addEventListener("pointerdown",e=>{
 const rect=canvas.getBoundingClientRect()
 const x=e.clientX-rect.left
 const y=e.clientY-rect.top
 
 selected=null
+rotating=false
 
 for(let i=items.length-1;i>=0;i--){
 let d=items[i]
-let r=d.size*2.5
-if(Math.hypot(d.x-x,d.y-y)<r){
+
+// ハンドル判定
+let hx=d.x
+let hy=d.y - d.size*3
+if(Math.hypot(hx-x,hy-y)<15){
+selected=d
+rotating=true
+canvas.setPointerCapture(e.pointerId)
+return
+}
+
+if(Math.hypot(d.x-x,d.y-y)<d.size*2.5){
 selected=d
 dragging=true
 offsetX=x-d.x
@@ -205,86 +210,49 @@ draw()
 })
 
 canvas.addEventListener("pointermove",e=>{
-if(!dragging||!selected)return
+if(!selected)return
+
 const rect=canvas.getBoundingClientRect()
 const x=e.clientX-rect.left
 const y=e.clientY-rect.top
 
+if(rotating){
+let angle=Math.atan2(y-selected.y,x-selected.x)*180/Math.PI
+selected.rot=angle
+rotateRange.value=angle
+rotateInput.value=Math.round(angle)
+}
+
+if(dragging){
 selected.x=x-offsetX
 selected.y=y-offsetY
+}
 
 draw()
 })
 
 canvas.addEventListener("pointerup",e=>{
-if(!dragging && selected){
-openEdit(selected)
-}
 dragging=false
+rotating=false
 canvas.releasePointerCapture(e.pointerId)
 })
 
-// ===== ＋ =====
-addBtn.onclick=()=>{
-openModal()
-title.innerText="種類"
-content.innerHTML=`
-<button onclick="step2('drum')">太鼓</button>
-<button onclick="step2('cymbal')">シンバル</button>
-`
-}
-
-function step2(cat){
-let html=""
-if(cat==="drum"){
-html=`
-<button onclick="step3('Kick')">Kick</button>
-<button onclick="step3('Snare')">Snare</button>
-<button onclick="step3('Tom')">Tom</button>
-<button onclick="step3('Floor Tom')">Floor Tom</button>
-`
-}else{
-html=`
-<button onclick="step3('Crash')">Crash</button>
-<button onclick="step3('Ride')">Ride</button>
-<button onclick="step3('HH')">Hi-Hat</button>
-<button onclick="step3('Splash')">Splash</button>
-<button onclick="step3('China')">China</button>
-`
-}
-title.innerText="選択"
-content.innerHTML=html
-}
-
-function step3(type){
-title.innerText="入力"
-content.innerHTML=`
-口径(インチ):<input id="size" type="number"><br>
-${type==="Kick"?'深さ(インチ):<input id="depth"><br>':''}
-<button onclick="create('${type}')">追加</button>
-`
-}
-
-function create(type){
-const sizeInput=document.getElementById("size")
-if(!sizeInput)return
-
-let sizeVal=parseInt(sizeInput.value)
-if(!sizeVal)return
-
-let depthVal=18
-if(type==="Kick"){
-const depthInput=document.getElementById("depth")
-depthVal=depthInput?parseInt(depthInput.value)||18:18
-}
-
-items.push({x:200,y:200,type,size:sizeVal,depth:depthVal,rot:0})
-
-closeModal()
+rotateRange.oninput=()=>{
+if(selected){
+selected.rot=parseInt(rotateRange.value)
+rotateInput.value=rotateRange.value
 draw()
 }
+}
 
-// ===== 編集 =====
+rotateInput.oninput=()=>{
+if(selected){
+selected.rot=parseInt(rotateInput.value)
+rotateRange.value=rotateInput.value
+draw()
+}
+}
+
 function openEdit(d){
 selected=d
 editModal.style.display="block"
@@ -292,11 +260,7 @@ overlay.style.display="block"
 
 editSize.value=d.size
 rotateRange.value=d.rot||0
-
-rotateRange.oninput=()=>{
-selected.rot=parseInt(rotateRange.value)
-draw()
-}
+rotateInput.value=d.rot||0
 
 if(d.type==="Kick"){
 depthWrap.style.display="block"
@@ -324,7 +288,7 @@ function sendBack(){items=items.filter(i=>i!==selected);items.unshift(selected);
 function forward(){let i=items.indexOf(selected);if(i<items.length-1){[items[i],items[i+1]]=[items[i+1],items[i]]}draw()}
 function backward(){let i=items.indexOf(selected);if(i>0){[items[i],items[i-1]]=[items[i-1],items[i]]}draw()}
 
-function toggleGrid(){grid=!grid;draw()}
+function toggleGrid(){draw()}
 function save(){localStorage.setItem("drum",JSON.stringify(items))}
 function load(){let d=localStorage.getItem("drum");if(d){items=JSON.parse(d);draw()}}
 function exportPNG(){
