@@ -7,65 +7,32 @@
 body{margin:0;font-family:sans-serif;background:#eee;overflow:hidden;}
 
 #topbar{
-position:absolute;
-top:0;
-left:0;
-width:100%;
-height:50px;
-background:#222;
-color:white;
-display:flex;
-align-items:center;
-padding:0 10px;
-gap:10px;
-z-index:10;
+position:absolute;top:0;left:0;width:100%;height:50px;
+background:#222;color:white;display:flex;align-items:center;
+padding:0 10px;gap:10px;z-index:10;
 }
 
-#canvas{
-position:absolute;
-top:50px;
-left:0;
-}
+#canvas{position:absolute;top:50px;left:0;}
 
-button{
-padding:5px 10px;
-}
+button{padding:5px 10px;}
 
 #addBtn{
-position:absolute;
-right:20px;
-bottom:20px;
-width:60px;
-height:60px;
-border-radius:50%;
-background:#ffd400;
-font-size:30px;
-border:none;
+position:absolute;right:20px;bottom:20px;
+width:60px;height:60px;border-radius:50%;
+background:#ffd400;font-size:30px;border:none;
 }
 
 /* モーダル */
-#modal{
-position:absolute;
-top:50%;
-left:50%;
+#modal,#editModal{
+position:absolute;top:50%;left:50%;
 transform:translate(-50%,-50%);
-background:white;
-padding:20px;
-border-radius:10px;
-display:none;
-z-index:20;
-width:260px;
+background:white;padding:20px;border-radius:10px;
+display:none;z-index:20;width:260px;
 }
 
 #overlay{
-position:absolute;
-top:0;
-left:0;
-width:100%;
-height:100%;
-background:rgba(0,0,0,0.4);
-display:none;
-z-index:15;
+position:absolute;top:0;left:0;width:100%;height:100%;
+background:rgba(0,0,0,0.4);display:none;z-index:15;
 }
 
 </style>
@@ -81,14 +48,19 @@ z-index:15;
 </div>
 
 <canvas id="canvas"></canvas>
-
 <button id="addBtn">＋</button>
 
 <div id="overlay"></div>
 
-<div id="modal">
-<h3 id="stepTitle">選択</h3>
-<div id="stepContent"></div>
+<div id="modal"></div>
+
+<div id="editModal">
+<h3>編集</h3>
+サイズ:<input id="editSize" type="number"><br>
+<div id="depthWrap">奥行き:<input id="editDepth" type="number"><br></div>
+<button onclick="applyEdit()">更新</button>
+<button onclick="deleteItem()">削除</button>
+<button onclick="rotateItem()">回転</button>
 </div>
 
 <script>
@@ -101,7 +73,12 @@ canvas.height=window.innerHeight-50
 
 let items=[]
 let drag=null
+let selected=null
 let grid=true
+
+function snap(v){
+return Math.round(v/50)*50
+}
 
 function getLabel(type){
 if(type==="Kick") return "BD"
@@ -138,6 +115,10 @@ y+=15
 
 items.forEach(d=>{
 
+ctx.save()
+ctx.translate(d.x,d.y)
+ctx.rotate((d.rot||0)*Math.PI/180)
+
 let label=getLabel(d.type)
 
 if(d.type==="Kick"){
@@ -145,185 +126,142 @@ let w=d.size*4
 let h=d.depth*3
 
 ctx.beginPath()
-ctx.rect(d.x-w/2,d.y-h/2,w,h)
+ctx.rect(-w/2,-h/2,w,h)
 ctx.fillStyle=d.color
 ctx.fill()
 ctx.stroke()
 
 ctx.textAlign="center"
+ctx.fillStyle="black"
 
 ctx.font="bold 16px sans-serif"
-ctx.fillText(`${d.size}"×${d.depth}"`,d.x,d.y-5)
-
+ctx.fillText(`${d.size}"×${d.depth}"`,0,-5)
 ctx.font="12px sans-serif"
-ctx.fillText(label,d.x,d.y+15)
+ctx.fillText(label,0,15)
 
 }else{
 
 let r=d.size*2
 ctx.beginPath()
-ctx.arc(d.x,d.y,r,0,Math.PI*2)
+ctx.arc(0,0,r,0,Math.PI*2)
 ctx.fillStyle=d.color
 ctx.fill()
 ctx.stroke()
 
 ctx.textAlign="center"
+ctx.fillStyle="black"
 
 ctx.font="bold 14px sans-serif"
-ctx.fillText(`${d.size}"`,d.x,d.y-5)
-
+ctx.fillText(`${d.size}"`,0,-5)
 ctx.font="12px sans-serif"
-ctx.fillText(label,d.x,d.y+12)
+ctx.fillText(label,0,12)
 }
+
+ctx.restore()
 
 })
 
 }
 
-// ===== モーダル制御 =====
-
-const modal=document.getElementById("modal")
-const overlay=document.getElementById("overlay")
-
-function openModal(){
-modal.style.display="block"
-overlay.style.display="block"
-}
-
-function closeModal(){
-modal.style.display="none"
-overlay.style.display="none"
-}
-
-// Step1
+// ===== 追加UI =====
 document.getElementById("addBtn").onclick=()=>{
-openModal()
-step1()
-}
-
-function step1(){
-document.getElementById("stepTitle").innerText="種類選択"
-document.getElementById("stepContent").innerHTML=`
-<button onclick="step2('drum')">太鼓</button>
-<button onclick="step2('cymbal')">シンバル</button>
-`
-}
-
-// Step2
-function step2(category){
-
-let html=""
-
-if(category==="drum"){
-html=`
-<button onclick="step3('Kick')">Kick</button>
-<button onclick="step3('Snare')">Snare</button>
-<button onclick="step3('Tom')">Tom</button>
-<button onclick="step3('Floor Tom')">Floor Tom</button>
-`
-}else{
-html=`
-<button onclick="step3('Crash')">Crash</button>
-<button onclick="step3('Ride')">Ride</button>
-<button onclick="step3('Splash')">Splash</button>
-<button onclick="step3('China')">China</button>
-`
-}
-
-document.getElementById("stepTitle").innerText="パーツ選択"
-document.getElementById("stepContent").innerHTML=html
-
-}
-
-// Step3
-function step3(type){
-
-document.getElementById("stepTitle").innerText="サイズ入力"
-
-let extra=""
-if(type==="Kick"){
-extra=`奥行き:<input id="depth" type="number"><br>`
-}
-
-document.getElementById("stepContent").innerHTML=`
-サイズ:<input id="size" type="number"><br>
-${extra}
-<button onclick="createItem('${type}')">追加</button>
-`
-
-}
-
-// 作成
-function createItem(type){
-
-let size=parseInt(document.getElementById("size").value)
-if(!size)return
-
+let type=prompt("Kick / Snare / Tom / Floor Tom / Crash / Ride")
+if(!type)return
+let size=parseInt(prompt("サイズ"))
 let depth=18
-if(type==="Kick"){
-depth=parseInt(document.getElementById("depth").value)||18
-}
+if(type==="Kick") depth=parseInt(prompt("奥行き"))||18
 
 let color="#fff"
-if(type==="Crash"||type==="Ride"||type==="Splash"||type==="China"){
-color="#FFD700"
-}
+if(type==="Crash"||type==="Ride") color="#FFD700"
 
-items.push({
-x:200,
-y:200,
-type:type,
-size:size,
-depth:depth,
-color:color
-})
-
-closeModal()
+items.push({x:200,y:200,type,size,depth,color,rot:0})
 draw()
-
 }
 
-// ===== 操作 =====
-
+// ===== ドラッグ & タップ =====
 canvas.onmousedown=e=>{
 let x=e.clientX
 let y=e.clientY-50
+
+selected=null
 
 items.forEach(d=>{
 let r=d.size*2
 if(Math.hypot(d.x-x,d.y-y)<r){
 drag=d
+selected=d
 }
 })
 }
 
 canvas.onmousemove=e=>{
 if(drag){
-drag.x=e.clientX
-drag.y=e.clientY-50
+drag.x=grid?snap(e.clientX):e.clientX
+drag.y=grid?snap(e.clientY-50):e.clientY-50
 draw()
 }
 }
 
-canvas.onmouseup=()=>drag=null
+canvas.onmouseup=e=>{
+if(drag){
+drag=null
+}else if(selected){
+openEdit(selected)
+}
+}
+
+// ===== 編集 =====
+
+function openEdit(d){
+selected=d
+document.getElementById("overlay").style.display="block"
+document.getElementById("editModal").style.display="block"
+
+document.getElementById("editSize").value=d.size
+
+if(d.type==="Kick"){
+document.getElementById("depthWrap").style.display="block"
+document.getElementById("editDepth").value=d.depth
+}else{
+document.getElementById("depthWrap").style.display="none"
+}
+}
+
+function applyEdit(){
+selected.size=parseInt(document.getElementById("editSize").value)
+
+if(selected.type==="Kick"){
+selected.depth=parseInt(document.getElementById("editDepth").value)
+}
+
+closeEdit()
+draw()
+}
+
+function deleteItem(){
+items=items.filter(i=>i!==selected)
+closeEdit()
+draw()
+}
+
+function rotateItem(){
+selected.rot=(selected.rot||0)+15
+draw()
+}
+
+function closeEdit(){
+document.getElementById("overlay").style.display="none"
+document.getElementById("editModal").style.display="none"
+}
 
 // ===== 機能 =====
 
-function toggleGrid(){
-grid=!grid
-draw()
-}
+function toggleGrid(){grid=!grid;draw()}
 
-function save(){
-localStorage.setItem("drum",JSON.stringify(items))
-}
-
+function save(){localStorage.setItem("drum",JSON.stringify(items))}
 function load(){
-let data=localStorage.getItem("drum")
-if(data){
-items=JSON.parse(data)
-draw()
-}
+let d=localStorage.getItem("drum")
+if(d){items=JSON.parse(d);draw()}
 }
 
 function exportPNG(){
