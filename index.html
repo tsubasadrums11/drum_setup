@@ -129,6 +129,7 @@ margin-top:5px;
 <script>
 
 const SCALE = 1.5
+const KICK_SCALE = 1.25
 
 const canvas = document.getElementById("canvas")
 const ctx = canvas.getContext("2d")
@@ -172,14 +173,15 @@ ctx.stroke()
 items.forEach(d=>{
 
 ctx.save()
-
 ctx.translate(d.x,d.y)
 ctx.rotate((d.rot||0)*Math.PI/180)
+
+let scale = (d.type==="Kick") ? KICK_SCALE : SCALE
 
 // ハイライト
 if(d===selected){
 ctx.beginPath()
-ctx.arc(0,0,d.size*2.8*SCALE,0,Math.PI*2)
+ctx.arc(0,0,d.size*2.8*scale,0,Math.PI*2)
 ctx.fillStyle="rgba(0,150,255,0.2)"
 ctx.fill()
 }
@@ -199,8 +201,8 @@ ctx.textBaseline="middle"
 
 // バスドラ
 if(d.type==="Kick"){
-let w = d.size*4*SCALE
-let h = d.depth*3*1.5*SCALE
+let w = d.size*4*scale
+let h = d.depth*3*1.5*scale
 
 ctx.fillStyle="#fff"
 ctx.fillRect(-w/2,-h/2,w,h)
@@ -212,8 +214,7 @@ ctx.fillText(d.size+'"',0,10)
 
 }else{
 
-// 円系
-let r = d.size*2*SCALE
+let r = d.size*2*scale
 
 ctx.beginPath()
 ctx.arc(0,0,r,0,Math.PI*2)
@@ -257,7 +258,9 @@ moved = false
 for(let i=items.length-1;i>=0;i--){
 let d = items[i]
 
-if(Math.hypot(d.x-x,d.y-y) < d.size*2.5*SCALE){
+let scale = (d.type==="Kick") ? KICK_SCALE : SCALE
+
+if(Math.hypot(d.x-x,d.y-y) < d.size*2.5*scale){
 
 selected = d
 dragging = true
@@ -304,7 +307,7 @@ dragging = false
 clearTimeout(pressTimer)
 }
 
-// 編集開く
+// 編集
 function openEdit(d){
 
 editModal.style.display="block"
@@ -323,7 +326,6 @@ depthWrap.style.display="none"
 
 }
 
-// 編集反映
 function applyEdit(){
 
 selected.size = parseInt(editSize.value)
@@ -337,137 +339,74 @@ closeEdit()
 
 }
 
-// 削除
 function deleteItem(){
-
 items = items.filter(i=>i!==selected)
 selected = null
-
 draw()
 closeEdit()
-
 }
 
 // レイヤー
-function bringFront(){
-items = items.filter(i=>i!==selected)
-items.push(selected)
-draw()
-}
-
-function sendBack(){
-items = items.filter(i=>i!==selected)
-items.unshift(selected)
-draw()
-}
-
-function forward(){
-let i = items.indexOf(selected)
-if(i < items.length-1){
-let temp = items[i]
-items[i] = items[i+1]
-items[i+1] = temp
-}
-draw()
-}
-
-function backward(){
-let i = items.indexOf(selected)
-if(i > 0){
-let temp = items[i]
-items[i] = items[i-1]
-items[i-1] = temp
-}
-draw()
-}
+function bringFront(){items = items.filter(i=>i!==selected);items.push(selected);draw()}
+function sendBack(){items = items.filter(i=>i!==selected);items.unshift(selected);draw()}
+function forward(){let i=items.indexOf(selected);if(i<items.length-1){[items[i],items[i+1]]=[items[i+1],items[i]]}draw()}
+function backward(){let i=items.indexOf(selected);if(i>0){[items[i],items[i-1]]=[items[i-1],items[i]]}draw()}
 
 // 回転
-rotateRange.oninput = ()=>{
-if(selected){
-selected.rot = parseInt(rotateRange.value)
-rotateInput.value = rotateRange.value
-draw()
-}
-}
+rotateRange.oninput=()=>{if(selected){selected.rot=parseInt(rotateRange.value);rotateInput.value=rotateRange.value;draw()}}
+rotateInput.oninput=()=>{if(selected){selected.rot=parseInt(rotateInput.value);rotateRange.value=rotateInput.value;draw()}}
 
-rotateInput.oninput = ()=>{
-if(selected){
-selected.rot = parseInt(rotateInput.value)
-rotateRange.value = rotateInput.value
-draw()
-}
-}
-
-// 追加ボタン
-addBtn.onclick = ()=>{
+// 追加UI
+addBtn.onclick=()=>{
 modal.style.display="block"
 overlay.style.display="block"
 modalTitle.innerText="追加"
 
-modalContent.innerHTML = `
+modalContent.innerHTML=`
 <button onclick="selectType('drum')">太鼓</button>
 <button onclick="selectType('cymbal')">シンバル</button>
 `
 }
 
-// 種類選択
 function selectType(type){
 
 if(type==="drum"){
-
-modalContent.innerHTML = `
+modalContent.innerHTML=`
 <button onclick="createDrum('Kick')">バスドラ</button>
 <button onclick="createDrum('Snare')">スネア</button>
 <button onclick="createDrum('Tom')">タム</button>
 <button onclick="createDrum('Floor Tom')">フロアタム</button>
 `
-
 }else{
-
-modalContent.innerHTML = `
+modalContent.innerHTML=`
 <button onclick="createCymbal('Crash')">Crash</button>
 <button onclick="createCymbal('Ride')">Ride</button>
 <button onclick="createCymbal('HH')">HH</button>
 <button onclick="createCymbal('Splash')">Splash</button>
 <button onclick="createCymbal('China')">China</button>
 `
-
 }
 
 }
 
-// 太鼓入力
 function createDrum(type){
-
-modalContent.innerHTML = `
+modalContent.innerHTML=`
 <label>口径(インチ)</label>
 <input id="size">
-
-${type==="Kick" ? `
-<label>深さ(インチ)</label>
-<input id="depth">
-` : ``}
-
+${type==="Kick" ? `<label>深さ(インチ)</label><input id="depth">` : ``}
 <button onclick="addItem('${type}')">追加</button>
 `
-
 }
 
-// シンバル入力
 function createCymbal(type){
-
-modalContent.innerHTML = `
+modalContent.innerHTML=`
 <label>口径(インチ)</label>
 <input id="size">
-
 <button onclick="addItem('${type}')">追加</button>
 `
-
 }
 
-// 追加処理
 function addItem(type){
-
 let size = parseInt(document.getElementById("size").value)
 let depth = document.getElementById("depth") ? parseInt(document.getElementById("depth").value) : 0
 
@@ -482,35 +421,18 @@ rot:0
 
 draw()
 closeModal()
-
 }
 
-// モーダル
-function closeModal(){
-modal.style.display="none"
-overlay.style.display="none"
-}
+function closeModal(){modal.style.display="none";overlay.style.display="none"}
+function closeEdit(){editModal.style.display="none";overlay.style.display="none"}
 
-function closeEdit(){
-editModal.style.display="none"
-overlay.style.display="none"
-}
+function save(){localStorage.setItem("drum",JSON.stringify(items))}
+function load(){items=JSON.parse(localStorage.getItem("drum")||"[]");draw()}
 
-// 保存
-function save(){
-localStorage.setItem("drum",JSON.stringify(items))
-}
-
-function load(){
-items = JSON.parse(localStorage.getItem("drum") || "[]")
-draw()
-}
-
-// PNG
 function exportPNG(){
-let a = document.createElement("a")
-a.href = canvas.toDataURL()
-a.download = "drum.png"
+let a=document.createElement("a")
+a.href=canvas.toDataURL()
+a.download="drum.png"
 a.click()
 }
 
