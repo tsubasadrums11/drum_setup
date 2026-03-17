@@ -1,10 +1,21 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta name="viewport" content="width=device-width,initial-scale=1">
+
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+
+<link rel="apple-touch-icon" href="icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+
 <style>
 
-body{margin:0;background:#eee;overflow:hidden;font-family:sans-serif;}
+html,body{
+margin:0;
+overflow:hidden;
+touch-action:none;
+background:#eee;
+font-family:sans-serif;
+}
 
 #topbar{
 position:absolute;top:0;left:0;width:100%;height:50px;
@@ -53,14 +64,12 @@ font-size:20px;cursor:pointer;
 
 <div id="overlay"></div>
 
-<!-- 追加モーダル -->
 <div id="modal">
 <div class="close" onclick="closeModal()">×</div>
 <h3 id="title"></h3>
 <div id="content"></div>
 </div>
 
-<!-- 編集モーダル -->
 <div id="editModal">
 <div class="close" onclick="closeEdit()">×</div>
 <h3>編集</h3>
@@ -77,6 +86,21 @@ font-size:20px;cursor:pointer;
 
 <script>
 
+// ===== ズーム完全禁止 =====
+document.addEventListener('gesturestart', e => e.preventDefault())
+document.addEventListener('gesturechange', e => e.preventDefault())
+document.addEventListener('gestureend', e => e.preventDefault())
+
+let lastTouchEnd = 0
+document.addEventListener('touchend', function (e) {
+const now = Date.now()
+if (now - lastTouchEnd <= 300) {
+e.preventDefault()
+}
+lastTouchEnd = now
+}, false)
+
+// ===== 基本 =====
 const canvas=document.getElementById("canvas")
 const ctx=canvas.getContext("2d")
 
@@ -87,6 +111,10 @@ let items=[]
 let drag=null
 let selected=null
 let grid=true
+
+let isDragging=false
+let startX=0
+let startY=0
 
 function snap(v){return Math.round(v/50)*50}
 
@@ -143,7 +171,7 @@ let r=d.size*2
 
 ctx.beginPath()
 ctx.arc(0,0,r,0,Math.PI*2)
-ctx.fillStyle=(d.type==="Crash"||d.type==="Ride"||d.type==="HH")?"#FFD700":"#fff"
+ctx.fillStyle=(["Crash","Ride","HH","Splash","China"].includes(d.type))?"#FFD700":"#fff"
 ctx.fill()
 
 ctx.strokeStyle="#000"
@@ -224,6 +252,8 @@ html=`
 <button onclick="step3('Crash')">Crash</button>
 <button onclick="step3('Ride')">Ride</button>
 <button onclick="step3('HH')">Hi-Hat</button>
+<button onclick="step3('Splash')">Splash</button>
+<button onclick="step3('China')">China</button>
 `
 }
 document.getElementById("title").innerText="選択"
@@ -267,18 +297,22 @@ closeModal()
 draw()
 }
 
-// ===== ドラッグ & タップ編集 =====
+// ===== ドラッグ & タップ =====
 
 canvas.onmousedown=e=>{
 let rect=canvas.getBoundingClientRect()
 let x=e.clientX-rect.left
 let y=e.clientY-rect.top
 
+startX=x
+startY=y
+isDragging=false
 selected=null
+drag=null
 
 for(let i=items.length-1;i>=0;i--){
 let d=items[i]
-let r=d.size*2
+let r=d.size*2.5
 if(Math.hypot(d.x-x,d.y-y)<r){
 drag=d
 selected=d
@@ -293,17 +327,23 @@ let rect=canvas.getBoundingClientRect()
 let x=e.clientX-rect.left
 let y=e.clientY-rect.top
 
+if(Math.hypot(x-startX,y-startY)>5){
+isDragging=true
+}
+
 drag.x=grid?snap(x):x
 drag.y=grid?snap(y):y
+
 draw()
 }
 }
 
 canvas.onmouseup=e=>{
 if(drag){
-drag=null
-}else if(selected){
+if(!isDragging && selected){
 openEdit(selected)
+}
+drag=null
 }
 }
 
