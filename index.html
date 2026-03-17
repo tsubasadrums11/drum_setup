@@ -2,11 +2,34 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width,initial-scale=1">
-
 <style>
-body{margin:0;background:#eee;font-family:sans-serif;overflow:hidden;}
 
-#canvas{position:absolute;top:0;left:0;}
+body{margin:0;font-family:sans-serif;background:#eee;overflow:hidden;}
+
+#topbar{
+position:absolute;
+top:0;
+left:0;
+width:100%;
+height:50px;
+background:#222;
+color:white;
+display:flex;
+align-items:center;
+padding:0 10px;
+gap:10px;
+z-index:10;
+}
+
+#canvas{
+position:absolute;
+top:50px;
+left:0;
+}
+
+button{
+padding:5px 10px;
+}
 
 #addBtn{
 position:absolute;
@@ -21,40 +44,51 @@ border:none;
 }
 
 /* モーダル */
-#menu{
+#modal{
 position:absolute;
-bottom:100px;
-right:20px;
+top:50%;
+left:50%;
+transform:translate(-50%,-50%);
 background:white;
-padding:10px;
+padding:20px;
 border-radius:10px;
-box-shadow:0 4px 10px rgba(0,0,0,0.3);
 display:none;
+z-index:20;
+width:260px;
 }
 
-#menu button{
-display:block;
-width:120px;
-margin:5px 0;
+#overlay{
+position:absolute;
+top:0;
+left:0;
+width:100%;
+height:100%;
+background:rgba(0,0,0,0.4);
+display:none;
+z-index:15;
 }
+
 </style>
 </head>
 
 <body>
 
+<div id="topbar">
+<button onclick="toggleGrid()">Grid</button>
+<button onclick="save()">保存</button>
+<button onclick="load()">読込</button>
+<button onclick="exportPNG()">PNG</button>
+</div>
+
 <canvas id="canvas"></canvas>
 
 <button id="addBtn">＋</button>
 
-<div id="menu">
-<button onclick="selectType('Kick')">Kick</button>
-<button onclick="selectType('Snare')">Snare</button>
-<button onclick="selectType('Tom')">Tom</button>
-<button onclick="selectType('Floor Tom')">Floor Tom</button>
-<button onclick="selectType('Crash')">Crash</button>
-<button onclick="selectType('Ride')">Ride</button>
-<button onclick="selectType('Splash')">Splash</button>
-<button onclick="selectType('China')">China</button>
+<div id="overlay"></div>
+
+<div id="modal">
+<h3 id="stepTitle">選択</h3>
+<div id="stepContent"></div>
 </div>
 
 <script>
@@ -63,7 +97,7 @@ const canvas=document.getElementById("canvas")
 const ctx=canvas.getContext("2d")
 
 canvas.width=window.innerWidth
-canvas.height=window.innerHeight
+canvas.height=window.innerHeight-50
 
 let items=[]
 let drag=null
@@ -89,8 +123,18 @@ ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(canvas.width,y);ctx.stroke()
 }
 
 function draw(){
+
 ctx.clearRect(0,0,canvas.width,canvas.height)
 drawGrid()
+
+// 左上リスト
+ctx.fillStyle="black"
+ctx.font="12px sans-serif"
+let y=20
+items.forEach(d=>{
+ctx.fillText(`${d.size}" ${getLabel(d.type)}`,10,y)
+y+=15
+})
 
 items.forEach(d=>{
 
@@ -107,7 +151,6 @@ ctx.fill()
 ctx.stroke()
 
 ctx.textAlign="center"
-ctx.fillStyle="black"
 
 ctx.font="bold 16px sans-serif"
 ctx.fillText(`${d.size}"×${d.depth}"`,d.x,d.y-5)
@@ -125,7 +168,6 @@ ctx.fill()
 ctx.stroke()
 
 ctx.textAlign="center"
-ctx.fillStyle="black"
 
 ctx.font="bold 14px sans-serif"
 ctx.fillText(`${d.size}"`,d.x,d.y-5)
@@ -135,23 +177,91 @@ ctx.fillText(label,d.x,d.y+12)
 }
 
 })
+
 }
 
-// ＋ボタン
+// ===== モーダル制御 =====
+
+const modal=document.getElementById("modal")
+const overlay=document.getElementById("overlay")
+
+function openModal(){
+modal.style.display="block"
+overlay.style.display="block"
+}
+
+function closeModal(){
+modal.style.display="none"
+overlay.style.display="none"
+}
+
+// Step1
 document.getElementById("addBtn").onclick=()=>{
-let menu=document.getElementById("menu")
-menu.style.display = menu.style.display==="none" ? "block" : "none"
+openModal()
+step1()
 }
 
-// 種類選択
-function selectType(type){
+function step1(){
+document.getElementById("stepTitle").innerText="種類選択"
+document.getElementById("stepContent").innerHTML=`
+<button onclick="step2('drum')">太鼓</button>
+<button onclick="step2('cymbal')">シンバル</button>
+`
+}
 
-let size=parseInt(prompt("サイズ（インチ）"))
+// Step2
+function step2(category){
+
+let html=""
+
+if(category==="drum"){
+html=`
+<button onclick="step3('Kick')">Kick</button>
+<button onclick="step3('Snare')">Snare</button>
+<button onclick="step3('Tom')">Tom</button>
+<button onclick="step3('Floor Tom')">Floor Tom</button>
+`
+}else{
+html=`
+<button onclick="step3('Crash')">Crash</button>
+<button onclick="step3('Ride')">Ride</button>
+<button onclick="step3('Splash')">Splash</button>
+<button onclick="step3('China')">China</button>
+`
+}
+
+document.getElementById("stepTitle").innerText="パーツ選択"
+document.getElementById("stepContent").innerHTML=html
+
+}
+
+// Step3
+function step3(type){
+
+document.getElementById("stepTitle").innerText="サイズ入力"
+
+let extra=""
+if(type==="Kick"){
+extra=`奥行き:<input id="depth" type="number"><br>`
+}
+
+document.getElementById("stepContent").innerHTML=`
+サイズ:<input id="size" type="number"><br>
+${extra}
+<button onclick="createItem('${type}')">追加</button>
+`
+
+}
+
+// 作成
+function createItem(type){
+
+let size=parseInt(document.getElementById("size").value)
 if(!size)return
 
 let depth=18
 if(type==="Kick"){
-depth=parseInt(prompt("奥行き"))
+depth=parseInt(document.getElementById("depth").value)||18
 }
 
 let color="#fff"
@@ -168,15 +278,16 @@ depth:depth,
 color:color
 })
 
-document.getElementById("menu").style.display="none"
-
+closeModal()
 draw()
+
 }
 
-// ドラッグ
+// ===== 操作 =====
+
 canvas.onmousedown=e=>{
 let x=e.clientX
-let y=e.clientY
+let y=e.clientY-50
 
 items.forEach(d=>{
 let r=d.size*2
@@ -189,12 +300,38 @@ drag=d
 canvas.onmousemove=e=>{
 if(drag){
 drag.x=e.clientX
-drag.y=e.clientY
+drag.y=e.clientY-50
 draw()
 }
 }
 
 canvas.onmouseup=()=>drag=null
+
+// ===== 機能 =====
+
+function toggleGrid(){
+grid=!grid
+draw()
+}
+
+function save(){
+localStorage.setItem("drum",JSON.stringify(items))
+}
+
+function load(){
+let data=localStorage.getItem("drum")
+if(data){
+items=JSON.parse(data)
+draw()
+}
+}
+
+function exportPNG(){
+let link=document.createElement("a")
+link.download="drum.png"
+link.href=canvas.toDataURL()
+link.click()
+}
 
 draw()
 
