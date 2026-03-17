@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html>
 <head>
 
@@ -82,23 +82,21 @@ font-size:20px;cursor:pointer;
 <button onclick="applyEdit()">更新</button>
 <button onclick="deleteItem()">削除</button>
 
+<hr>
+
+<button onclick="bringFront()">最前面</button>
+<button onclick="sendBack()">最背面</button>
+<button onclick="forward()">一つ前へ</button>
+<button onclick="backward()">一つ後ろへ</button>
+
 </div>
 
 <script>
 
-// ===== ズーム完全禁止 =====
+// ===== ズーム禁止 =====
 document.addEventListener('gesturestart', e => e.preventDefault())
 document.addEventListener('gesturechange', e => e.preventDefault())
 document.addEventListener('gestureend', e => e.preventDefault())
-
-let lastTouchEnd = 0
-document.addEventListener('touchend', function (e) {
-const now = Date.now()
-if (now - lastTouchEnd <= 300) {
-e.preventDefault()
-}
-lastTouchEnd = now
-}, false)
 
 // ===== 基本 =====
 const canvas=document.getElementById("canvas")
@@ -108,18 +106,16 @@ canvas.width=window.innerWidth
 canvas.height=window.innerHeight-50
 
 let items=[]
-let drag=null
 let selected=null
 let grid=true
 
-let isDragging=false
-let startX=0
-let startY=0
+let dragging=false
+let offsetX=0
+let offsetY=0
 
 function snap(v){return Math.round(v/50)*50}
 
 // ===== 描画 =====
-
 function drawGrid(){
 if(!grid)return
 ctx.strokeStyle="#ccc"
@@ -132,12 +128,10 @@ ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(canvas.width,y);ctx.stroke()
 }
 
 function draw(){
-
 ctx.clearRect(0,0,canvas.width,canvas.height)
 drawGrid()
 
 items.forEach(d=>{
-
 ctx.save()
 ctx.translate(d.x,d.y)
 ctx.rotate((d.rot||0)*Math.PI/180)
@@ -151,29 +145,23 @@ if(d.type==="Floor Tom") label="FT"
 if(d.type==="Kick"){
 let w=d.size*4
 let h=d.depth*3
-
 ctx.fillStyle="#fff"
 ctx.fillRect(-w/2,-h/2,w,h)
-
 ctx.strokeStyle="#000"
 ctx.lineWidth=2
 ctx.strokeRect(-w/2,-h/2,w,h)
 
 ctx.textAlign="center"
 ctx.fillStyle="#000"
-
 ctx.fillText(label,0,-5)
 ctx.fillText(`${d.size}"`,0,15)
 
 }else{
-
 let r=d.size*2
-
 ctx.beginPath()
 ctx.arc(0,0,r,0,Math.PI*2)
 ctx.fillStyle=(["Crash","Ride","HH","Splash","China"].includes(d.type))?"#FFD700":"#fff"
 ctx.fill()
-
 ctx.strokeStyle="#000"
 ctx.lineWidth=2
 ctx.stroke()
@@ -188,176 +176,129 @@ ctx.fillText(`${d.size}"`,0,15)
 ctx.fillText(d.type,0,-5)
 ctx.fillText(`${d.size}"`,0,15)
 }
-
 }
 
 ctx.restore()
-
 })
-
 }
 
-// ===== モーダル =====
+// ===== タッチ＆マウス統合 =====
 
-const modal=document.getElementById("modal")
-const overlay=document.getElementById("overlay")
-const editModal=document.getElementById("editModal")
-
-function openModal(){modal.style.display="block";overlay.style.display="block"}
-function closeModal(){modal.style.display="none";overlay.style.display="none"}
-
-function openEdit(d){
-selected=d
-editModal.style.display="block"
-overlay.style.display="block"
-
-document.getElementById("editSize").value=d.size
-document.getElementById("rotateRange").value=d.rot||0
-
-if(d.type==="Kick"){
-document.getElementById("depthWrap").style.display="block"
-document.getElementById("editDepth").value=d.depth
+function getPos(e){
+if(e.touches){
+return {
+x:e.touches[0].clientX,
+y:e.touches[0].clientY-50
+}
 }else{
-document.getElementById("depthWrap").style.display="none"
+return {
+x:e.clientX,
+y:e.clientY-50
 }
 }
-
-function closeEdit(){
-editModal.style.display="none"
-overlay.style.display="none"
 }
 
-// ===== 追加UI =====
-
-document.getElementById("addBtn").onclick=()=>{
-openModal()
-document.getElementById("title").innerText="種類"
-document.getElementById("content").innerHTML=`
-<button onclick="step2('drum')">太鼓</button>
-<button onclick="step2('cymbal')">シンバル</button>
-`
-}
-
-function step2(cat){
-let html=""
-if(cat==="drum"){
-html=`
-<button onclick="step3('Kick')">Kick</button>
-<button onclick="step3('Snare')">Snare</button>
-<button onclick="step3('Tom')">Tom</button>
-<button onclick="step3('Floor Tom')">Floor Tom</button>
-`
-}else{
-html=`
-<button onclick="step3('Crash')">Crash</button>
-<button onclick="step3('Ride')">Ride</button>
-<button onclick="step3('HH')">Hi-Hat</button>
-<button onclick="step3('Splash')">Splash</button>
-<button onclick="step3('China')">China</button>
-`
-}
-document.getElementById("title").innerText="選択"
-document.getElementById("content").innerHTML=html
-}
-
-function step3(type){
-document.getElementById("title").innerText="サイズ"
-
-let extra=""
-if(type==="Kick"){
-extra=`奥行:<input id="depth" type="number"><br>`
-}
-
-document.getElementById("content").innerHTML=`
-サイズ:<input id="size" type="number"><br>
-${extra}
-<button onclick="create('${type}')">追加</button>
-`
-}
-
-function create(type){
-let size=parseInt(document.getElementById("size").value)
-if(!size)return
-
-let depth=18
-if(type==="Kick"){
-depth=parseInt(document.getElementById("depth").value)||18
-}
-
-items.push({
-x:snap(200),
-y:snap(200),
-type:type,
-size:size,
-depth:depth,
-rot:0
-})
-
-closeModal()
-draw()
-}
-
-// ===== ドラッグ & タップ =====
-
-canvas.onmousedown=e=>{
-let rect=canvas.getBoundingClientRect()
-let x=e.clientX-rect.left
-let y=e.clientY-rect.top
-
-startX=x
-startY=y
-isDragging=false
+function start(e){
+let pos=getPos(e)
 selected=null
-drag=null
 
 for(let i=items.length-1;i>=0;i--){
 let d=items[i]
 let r=d.size*2.5
-if(Math.hypot(d.x-x,d.y-y)<r){
-drag=d
+if(Math.hypot(d.x-pos.x,d.y-pos.y)<r){
 selected=d
+dragging=true
+offsetX=pos.x-d.x
+offsetY=pos.y-d.y
 break
 }
 }
 }
 
-canvas.onmousemove=e=>{
-if(drag){
-let rect=canvas.getBoundingClientRect()
-let x=e.clientX-rect.left
-let y=e.clientY-rect.top
+function move(e){
+if(!dragging || !selected)return
 
-if(Math.hypot(x-startX,y-startY)>5){
-isDragging=true
-}
+let pos=getPos(e)
 
-drag.x=grid?snap(x):x
-drag.y=grid?snap(y):y
+selected.x=grid?snap(pos.x-offsetX):pos.x-offsetX
+selected.y=grid?snap(pos.y-offsetY):pos.y-offsetY
 
 draw()
 }
+
+function end(){
+dragging=false
 }
 
-canvas.onmouseup=e=>{
-if(drag){
-if(!isDragging && selected){
-openEdit(selected)
-}
-drag=null
+// イベント
+canvas.addEventListener("mousedown",start)
+canvas.addEventListener("mousemove",move)
+canvas.addEventListener("mouseup",end)
+
+canvas.addEventListener("touchstart",start)
+canvas.addEventListener("touchmove",move)
+canvas.addEventListener("touchend",end)
+
+// ===== モーダル =====
+
+function openEdit(d){
+selected=d
+document.getElementById("editModal").style.display="block"
+document.getElementById("overlay").style.display="block"
+
+editSize.value=d.size
+rotateRange.value=d.rot||0
+
+if(d.type==="Kick"){
+depthWrap.style.display="block"
+editDepth.value=d.depth
+}else{
+depthWrap.style.display="none"
 }
 }
 
-// ===== 編集 =====
+canvas.addEventListener("dblclick",()=>{
+if(selected) openEdit(selected)
+})
+
+// ===== レイヤー =====
+
+function bringFront(){
+items=items.filter(i=>i!==selected)
+items.push(selected)
+draw()
+}
+
+function sendBack(){
+items=items.filter(i=>i!==selected)
+items.unshift(selected)
+draw()
+}
+
+function forward(){
+let i=items.indexOf(selected)
+if(i<items.length-1){
+[items[i],items[i+1]]=[items[i+1],items[i]]
+}
+draw()
+}
+
+function backward(){
+let i=items.indexOf(selected)
+if(i>0){
+[items[i],items[i-1]]=[items[i-1],items[i]]
+}
+draw()
+}
+
+// ===== その他 =====
 
 function applyEdit(){
-selected.size=parseInt(document.getElementById("editSize").value)
-
+selected.size=parseInt(editSize.value)
 if(selected.type==="Kick"){
-selected.depth=parseInt(document.getElementById("editDepth").value)
+selected.depth=parseInt(editDepth.value)
 }
-
-selected.rot=parseInt(document.getElementById("rotateRange").value)
-
+selected.rot=parseInt(rotateRange.value)
 closeEdit()
 draw()
 }
@@ -368,7 +309,10 @@ closeEdit()
 draw()
 }
 
-// ===== 機能 =====
+function closeEdit(){
+editModal.style.display="none"
+overlay.style.display="none"
+}
 
 function toggleGrid(){grid=!grid;draw()}
 
@@ -378,6 +322,7 @@ let d=localStorage.getItem("drum")
 if(d){items=JSON.parse(d);draw()}
 }
 
+// ===== 初期描画 =====
 draw()
 
 </script>
