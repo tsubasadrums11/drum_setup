@@ -68,8 +68,8 @@ font-size:20px;cursor:pointer;
 <div class="close" onclick="closeEdit()">×</div>
 <h3>編集</h3>
 
-インチ:<input id="editSize" type="number"><br>
-<div id="depthWrap">奥行:<input id="editDepth" type="number"><br></div>
+口径(インチ):<input id="editSize" type="number"><br>
+<div id="depthWrap">深さ(インチ):<input id="editDepth" type="number"><br></div>
 
 回転:<input id="rotateRange" type="range" min="0" max="360"><br>
 
@@ -99,8 +99,6 @@ let selected=null
 let dragging=false
 let offsetX=0,offsetY=0
 let grid=true
-
-function snap(v){return Math.round(v/50)*50}
 
 function drawGrid(){
 if(!grid)return
@@ -140,7 +138,7 @@ if(d.type==="Floor Tom") label="FT"
 
 if(d.type==="Kick"){
 let w=d.size*4
-let h=d.depth*3
+let h=d.depth*3*1.5  // ←縦1.5倍
 
 ctx.fillStyle="#fff"
 ctx.fillRect(-w/2,-h/2,w,h)
@@ -183,6 +181,7 @@ ctx.restore()
 })
 }
 
+// ===== 自由移動 =====
 canvas.addEventListener("pointerdown",e=>{
 const rect=canvas.getBoundingClientRect()
 const x=e.clientX-rect.left
@@ -211,8 +210,8 @@ const rect=canvas.getBoundingClientRect()
 const x=e.clientX-rect.left
 const y=e.clientY-rect.top
 
-selected.x=grid?snap(x-offsetX):x-offsetX
-selected.y=grid?snap(y-offsetY):y-offsetY
+selected.x=x-offsetX
+selected.y=y-offsetY
 
 draw()
 })
@@ -225,6 +224,7 @@ dragging=false
 canvas.releasePointerCapture(e.pointerId)
 })
 
+// ===== ＋ =====
 addBtn.onclick=()=>{
 openModal()
 title.innerText="種類"
@@ -257,10 +257,10 @@ content.innerHTML=html
 }
 
 function step3(type){
-title.innerText="インチ入力"
+title.innerText="入力"
 content.innerHTML=`
-インチ:<input id="size" type="number"><br>
-${type==="Kick"?'奥行:<input id="depth"><br>':''}
+口径(インチ):<input id="size" type="number"><br>
+${type==="Kick"?'深さ(インチ):<input id="depth"><br>':''}
 <button onclick="create('${type}')">追加</button>
 `
 }
@@ -278,19 +278,13 @@ const depthInput=document.getElementById("depth")
 depthVal=depthInput?parseInt(depthInput.value)||18:18
 }
 
-items.push({
-x:snap(200),
-y:snap(200),
-type:type,
-size:sizeVal,
-depth:depthVal,
-rot:0
-})
+items.push({x:200,y:200,type,size:sizeVal,depth:depthVal,rot:0})
 
 closeModal()
 draw()
 }
 
+// ===== 編集 =====
 function openEdit(d){
 selected=d
 editModal.style.display="block"
@@ -298,6 +292,11 @@ overlay.style.display="block"
 
 editSize.value=d.size
 rotateRange.value=d.rot||0
+
+rotateRange.oninput=()=>{
+selected.rot=parseInt(rotateRange.value)
+draw()
+}
 
 if(d.type==="Kick"){
 depthWrap.style.display="block"
@@ -310,7 +309,6 @@ selected.size=parseInt(editSize.value)
 if(selected.type==="Kick"){
 selected.depth=parseInt(editDepth.value)
 }
-selected.rot=parseInt(rotateRange.value)
 closeEdit()
 draw()
 }
