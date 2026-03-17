@@ -2,204 +2,204 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width,initial-scale=1">
+
 <style>
-body { margin:0; font-family:sans-serif; background:#eee; overflow:hidden; }
+body{margin:0;font-family:sans-serif;background:#eee;overflow:hidden;}
 
-/* 上部パネル */
-#panel {
-  position: fixed; top:0; left:0; width:100%; 
-  background:#f5f5f5; padding:10px; box-sizing:border-box;
-  display:flex; flex-wrap:wrap; gap:10px; align-items:flex-start;
-  border-bottom:2px solid #ccc;
-  z-index:10;
-}
-#panel > div { display:flex; flex-direction:column; }
-
-#canvas {
-  position:absolute; top:auto; left:0;
-  width:100%; height:calc(100% - var(--panelHeight,180px));
+#panel{
+position:absolute;left:0;top:0;width:230px;height:100%;
+background:#f5f5f5;padding:10px;overflow:auto;
 }
 
-button { cursor:pointer; }
-input, select { min-width:50px; margin:2px 0; }
+#canvas{position:absolute;left:230px;top:0;}
 
-#addBtn {
-  background:#ffd400; border:none; font-size:24px; font-weight:bold;
-  padding:8px 12px; border-radius:8px; box-shadow:0 2px 4px rgba(0,0,0,0.3);
+button{margin:3px;}
+
+#addBtn{
+position:absolute;right:20px;bottom:20px;
+width:60px;height:60px;border-radius:50%;
+background:#ffd400;border:none;font-size:32px;
 }
-#resetBtn { background:#f88; border:none; font-size:14px; padding:4px 8px; border-radius:5px; }
 </style>
 </head>
+
 <body>
 
 <div id="panel">
-  <div>
-    <h4>Drums Kit</h4>
-    <div id="list"></div>
-  </div>
-  <div>
-    <h4>Cymbals</h4>
-    <div id="cymbalList"></div>
-  </div>
-  <div>
-    <h4>Add Drum/Cymbal</h4>
-    <label>Type:</label>
-    <select id="typeSelect">
-      <option>Kick</option>
-      <option>Snare</option>
-      <option>Tom</option>
-      <option>Floor Tom</option>
-      <option>Crash</option>
-      <option>Ride</option>
-      <option>HiHat</option>
-      <option>Splash</option>
-      <option>China</option>
-    </select>
-    <label>Size (inch):</label>
-    <input id="sizeInput" type="number">
-    <label id="depthLabel">Depth (inch, Kick only):</label>
-    <input id="depthInput" type="number">
-    <button id="addBtn">＋ Add</button>
-    <button id="resetBtn">Reset All</button>
-  </div>
+<h3>Drums</h3>
+<div id="list"></div>
+
+<button onclick="addItem()">＋追加</button>
+<button onclick="toggleGrid()">Grid</button>
+<button onclick="save()">保存</button>
+<button onclick="load()">読込</button>
 </div>
 
 <canvas id="canvas"></canvas>
+<button id="addBtn" onclick="addItem()">＋</button>
 
 <script>
-const canvas = document.getElementById("canvas");
-const ctx = canvas.getContext("2d");
-const panel = document.getElementById("panel");
 
-let items = [];
-let dragItem = null, offsetX=0, offsetY=0;
+const canvas=document.getElementById("canvas")
+const ctx=canvas.getContext("2d")
 
-function updatePanelHeight(){
-  const h = panel.offsetHeight;
-  document.documentElement.style.setProperty('--panelHeight', h+'px');
-  canvas.style.top = h+'px';
-  canvas.height = window.innerHeight - h;
+canvas.width=window.innerWidth-230
+canvas.height=window.innerHeight
+
+let items=[]
+let grid=true
+let drag=null
+
+function getLabel(type){
+if(type==="Kick") return "BD"
+if(type==="Snare") return "SD"
+if(type==="Tom") return "TT"
+if(type==="Floor Tom") return "FT"
+return type
 }
-window.addEventListener("resize", updatePanelHeight);
 
-function resizeCanvas(){ 
-  canvas.width = window.innerWidth; 
-  updatePanelHeight();
-}
-resizeCanvas();
-
-// グリッド
 function drawGrid(){
-  let size=50; ctx.strokeStyle="#ccc";
-  for(let x=0;x<canvas.width;x+=size){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,canvas.height);ctx.stroke();}
-  for(let y=0;y<canvas.height;y+=size){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(canvas.width,y);ctx.stroke();}
+if(!grid)return
+ctx.strokeStyle="#ccc"
+for(let x=0;x<canvas.width;x+=50){
+ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,canvas.height);ctx.stroke()
+}
+for(let y=0;y<canvas.height;y+=50){
+ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(canvas.width,y);ctx.stroke()
+}
 }
 
-// 描画
 function draw(){
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  drawGrid();
-  items.forEach(d=>{
-    let label=d.type;
-    if(d.type=="Kick") label="BD";
-    if(d.type=="Snare") label="SD";
-    if(d.type=="Tom") label="TT";
-    if(d.type=="Floor Tom") label="FT";
+ctx.clearRect(0,0,canvas.width,canvas.height)
+drawGrid()
 
-    ctx.lineWidth=3; ctx.strokeStyle="black"; ctx.textAlign="center";
+items.forEach(d=>{
 
-    if(d.type=="Kick"){
-      let w = d.size * 4.5; // 横幅大きめ
-      let h = d.depth * 4;   // 縦長
-      ctx.beginPath();
-      ctx.rect(d.x - w/2, d.y - h/2, w, h);
-      ctx.fillStyle=d.color;
-      ctx.fill();
-      ctx.stroke();
-      ctx.fillStyle="black";
-      ctx.font="bold 16px sans-serif";
-      ctx.fillText(d.size+'"×'+d.depth+'"', d.x, d.y-5);
-      ctx.font="13px sans-serif";
-      ctx.fillText("BD", d.x, d.y+15);
-    } else {
-      let r=(d.size+2)*2;
-      ctx.beginPath();
-      ctx.arc(d.x,d.y,r,0,Math.PI*2);
-      ctx.fillStyle=d.color;
-      ctx.fill();
-      ctx.stroke();
-      ctx.fillStyle="black";
-      ctx.font="bold 14px sans-serif";
-      ctx.fillText(d.size+'"', d.x,d.y-5);
-      ctx.font="12px sans-serif";
-      ctx.fillText(["Snare","Tom","Floor Tom"].includes(d.type)?label:d.type,d.x,d.y+12);
-    }
-  });
-  updateList();
+let label=getLabel(d.type)
+
+if(d.type==="Kick"){
+let w=d.size*4
+let h=d.depth*3
+
+ctx.beginPath()
+ctx.rect(d.x-w/2,d.y-h/2,w,h)
+ctx.fillStyle=d.color
+ctx.fill()
+ctx.stroke()
+
+ctx.textAlign="center"
+ctx.fillStyle="black"
+
+ctx.font="bold 16px sans-serif"
+ctx.fillText(`${d.size}"×${d.depth}"`,d.x,d.y-5)
+
+ctx.font="12px sans-serif"
+ctx.fillText(label,d.x,d.y+15)
+
+}else{
+
+let r=d.size*2
+ctx.beginPath()
+ctx.arc(d.x,d.y,r,0,Math.PI*2)
+ctx.fillStyle=d.color
+ctx.fill()
+ctx.stroke()
+
+ctx.textAlign="center"
+ctx.fillStyle="black"
+
+ctx.font="bold 14px sans-serif"
+ctx.fillText(`${d.size}"`,d.x,d.y-5)
+
+ctx.font="12px sans-serif"
+ctx.fillText(label,d.x,d.y+12)
 }
 
-// リスト更新
+})
+
+updateList()
+}
+
+function addItem(){
+
+let type=prompt("種類\nKick / Snare / Tom / Floor Tom / Crash / Ride")
+
+if(!type)return
+
+let size=parseInt(prompt("サイズ(インチ)"))
+if(!size)return
+
+let depth=18
+if(type==="Kick"){
+depth=parseInt(prompt("奥行き"))
+}
+
+let color=prompt("色(hex)", "#ffffff")
+
+items.push({
+x:300,
+y:200,
+type:type,
+size:size,
+depth:depth,
+color:color
+})
+
+draw()
+}
+
 function updateList(){
-  let drumHTML="", cymHTML="";
-  items.forEach(d=>{
-    let label=d.type;
-    if(d.type=="Kick") label="BD";
-    if(d.type=="Snare") label="SD";
-    if(d.type=="Tom") label="TT";
-    if(d.type=="Floor Tom") label="FT";
-    let text = d.size+'" '+label+' <button onclick="deleteItem('+items.indexOf(d)+')">x</button>';
-    if(["Crash","Ride","HiHat","Splash","China"].includes(d.type)) cymHTML+=text+"<br>";
-    else drumHTML+=text+"<br>";
-  });
-  document.getElementById("list").innerHTML=drumHTML;
-  document.getElementById("cymbalList").innerHTML=cymHTML;
+let html=""
+items.forEach(d=>{
+html+=`${d.size}" ${getLabel(d.type)}<br>`
+})
+document.getElementById("list").innerHTML=html
 }
 
-// ADDボタン
-document.getElementById("addBtn").addEventListener("click", ()=>{
-  const type = document.getElementById("typeSelect").value;
-  const size = parseInt(document.getElementById("sizeInput").value);
-  const depth = type==="Kick"?parseInt(document.getElementById("depthInput").value):0;
-  const color = ["Crash","Ride","HiHat","Splash","China"].includes(type)?"#FFD700":"#fff";
-  if(!size||(type==="Kick"&&!depth)) return alert("サイズを正しく入力してください");
-  const x = Math.max(30,Math.min(canvas.width-30,canvas.width/2));
-  const y = Math.max(30,Math.min(canvas.height-30,canvas.height/2));
-  items.push({x,y,type,size,depth,color});
-  draw();
-});
-
-// 削除・リセット
-function deleteItem(i){ items.splice(i,1); draw(); }
-document.getElementById("resetBtn").addEventListener("click",()=>{ items=[]; draw(); });
-
-// ドラッグ
-function getPointerPos(e){ const rect=canvas.getBoundingClientRect(); return e.touches?{x:e.touches[0].clientX-rect.left,y:e.touches[0].clientY-rect.top}:{x:e.clientX-rect.left,y:e.clientY-rect.top}; }
-function startDrag(e){ e.preventDefault(); const pos=getPointerPos(e);
-  for(let i=items.length-1;i>=0;i--){ const d=items[i]; let hit=false;
-    if(d.type=="Kick"){ let w=d.size*4.5,h=d.depth*4; hit=(pos.x>d.x-w/2&&pos.x<d.x+w/2&&pos.y>d.y-h/2&&pos.y<d.y+h/2);}
-    else hit=(Math.hypot(pos.x-d.x,pos.y-d.y)<(d.size+2)*2);
-    if(hit){ dragItem=d; offsetX=pos.x-d.x; offsetY=pos.y-d.y; break; }
-  }
+function toggleGrid(){
+grid=!grid
+draw()
 }
-function moveDrag(e){ if(!dragItem) return; const pos=getPointerPos(e); dragItem.x=pos.x-offsetX; dragItem.y=pos.y-offsetY; draw(); }
-function endDrag(){ dragItem=null; }
-canvas.addEventListener("mousedown",startDrag);
-canvas.addEventListener("mousemove",moveDrag);
-canvas.addEventListener("mouseup",endDrag);
-canvas.addEventListener("mouseleave",endDrag);
-canvas.addEventListener("touchstart",startDrag,{passive:false});
-canvas.addEventListener("touchmove",moveDrag,{passive:false});
-canvas.addEventListener("touchend",endDrag,{passive:false});
-canvas.addEventListener("touchcancel",endDrag,{passive:false});
 
-// Depth欄表示
-const typeSelect=document.getElementById("typeSelect");
-const depthLabel=document.getElementById("depthLabel");
-const depthInput=document.getElementById("depthInput");
-typeSelect.addEventListener("change",()=>{
-  if(typeSelect.value==="Kick"){ depthLabel.style.display="block"; depthInput.style.display="block"; }
-  else{ depthLabel.style.display="none"; depthInput.style.display="none"; }
-});
+function save(){
+localStorage.setItem("drumSet",JSON.stringify(items))
+alert("保存した")
+}
+
+function load(){
+let data=localStorage.getItem("drumSet")
+if(data){
+items=JSON.parse(data)
+draw()
+}
+}
+
+canvas.onmousedown=e=>{
+let rect=canvas.getBoundingClientRect()
+let x=e.clientX-rect.left
+let y=e.clientY-rect.top
+
+items.forEach(d=>{
+let r=d.size*2
+if(Math.hypot(d.x-x,d.y-y)<r){
+drag=d
+}
+})
+}
+
+canvas.onmousemove=e=>{
+if(drag){
+let rect=canvas.getBoundingClientRect()
+drag.x=e.clientX-rect.left
+drag.y=e.clientY-rect.top
+draw()
+}
+}
+
+canvas.onmouseup=()=>drag=null
+
+draw()
+
 </script>
 
 </body>
