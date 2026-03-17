@@ -4,51 +4,70 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 
 <style>
-body{margin:0;font-family:sans-serif;background:#eee;overflow:hidden;}
+body{margin:0;background:#eee;font-family:sans-serif;overflow:hidden;}
 
-#panel{
-position:absolute;left:0;top:0;width:230px;height:100%;
-background:#f5f5f5;padding:10px;overflow:auto;
-}
-
-#canvas{position:absolute;left:230px;top:0;}
-
-button{margin:3px;}
+#canvas{position:absolute;top:0;left:0;}
 
 #addBtn{
-position:absolute;right:20px;bottom:20px;
-width:60px;height:60px;border-radius:50%;
-background:#ffd400;border:none;font-size:32px;
+position:absolute;
+right:20px;
+bottom:20px;
+width:60px;
+height:60px;
+border-radius:50%;
+background:#ffd400;
+font-size:30px;
+border:none;
+}
+
+/* モーダル */
+#menu{
+position:absolute;
+bottom:100px;
+right:20px;
+background:white;
+padding:10px;
+border-radius:10px;
+box-shadow:0 4px 10px rgba(0,0,0,0.3);
+display:none;
+}
+
+#menu button{
+display:block;
+width:120px;
+margin:5px 0;
 }
 </style>
 </head>
 
 <body>
 
-<div id="panel">
-<h3>Drums</h3>
-<div id="list"></div>
-
-<button onclick="addItem()">＋追加</button>
-<button onclick="toggleGrid()">Grid</button>
-<button onclick="save()">保存</button>
-<button onclick="load()">読込</button>
-</div>
-
 <canvas id="canvas"></canvas>
-<button id="addBtn" onclick="addItem()">＋</button>
+
+<button id="addBtn">＋</button>
+
+<div id="menu">
+<button onclick="selectType('Kick')">Kick</button>
+<button onclick="selectType('Snare')">Snare</button>
+<button onclick="selectType('Tom')">Tom</button>
+<button onclick="selectType('Floor Tom')">Floor Tom</button>
+<button onclick="selectType('Crash')">Crash</button>
+<button onclick="selectType('Ride')">Ride</button>
+<button onclick="selectType('Splash')">Splash</button>
+<button onclick="selectType('China')">China</button>
+</div>
 
 <script>
 
 const canvas=document.getElementById("canvas")
 const ctx=canvas.getContext("2d")
 
-canvas.width=window.innerWidth-230
+canvas.width=window.innerWidth
 canvas.height=window.innerHeight
 
 let items=[]
-let grid=true
 let drag=null
+let grid=true
 
 function getLabel(type){
 if(type==="Kick") return "BD"
@@ -116,17 +135,18 @@ ctx.fillText(label,d.x,d.y+12)
 }
 
 })
-
-updateList()
 }
 
-function addItem(){
+// ＋ボタン
+document.getElementById("addBtn").onclick=()=>{
+let menu=document.getElementById("menu")
+menu.style.display = menu.style.display==="none" ? "block" : "none"
+}
 
-let type=prompt("種類\nKick / Snare / Tom / Floor Tom / Crash / Ride")
+// 種類選択
+function selectType(type){
 
-if(!type)return
-
-let size=parseInt(prompt("サイズ(インチ)"))
+let size=parseInt(prompt("サイズ（インチ）"))
 if(!size)return
 
 let depth=18
@@ -134,10 +154,13 @@ if(type==="Kick"){
 depth=parseInt(prompt("奥行き"))
 }
 
-let color=prompt("色(hex)", "#ffffff")
+let color="#fff"
+if(type==="Crash"||type==="Ride"||type==="Splash"||type==="China"){
+color="#FFD700"
+}
 
 items.push({
-x:300,
+x:200,
 y:200,
 type:type,
 size:size,
@@ -145,39 +168,15 @@ depth:depth,
 color:color
 })
 
+document.getElementById("menu").style.display="none"
+
 draw()
 }
 
-function updateList(){
-let html=""
-items.forEach(d=>{
-html+=`${d.size}" ${getLabel(d.type)}<br>`
-})
-document.getElementById("list").innerHTML=html
-}
-
-function toggleGrid(){
-grid=!grid
-draw()
-}
-
-function save(){
-localStorage.setItem("drumSet",JSON.stringify(items))
-alert("保存した")
-}
-
-function load(){
-let data=localStorage.getItem("drumSet")
-if(data){
-items=JSON.parse(data)
-draw()
-}
-}
-
+// ドラッグ
 canvas.onmousedown=e=>{
-let rect=canvas.getBoundingClientRect()
-let x=e.clientX-rect.left
-let y=e.clientY-rect.top
+let x=e.clientX
+let y=e.clientY
 
 items.forEach(d=>{
 let r=d.size*2
@@ -189,9 +188,8 @@ drag=d
 
 canvas.onmousemove=e=>{
 if(drag){
-let rect=canvas.getBoundingClientRect()
-drag.x=e.clientX-rect.left
-drag.y=e.clientY-rect.top
+drag.x=e.clientX
+drag.y=e.clientY
 draw()
 }
 }
